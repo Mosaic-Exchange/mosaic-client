@@ -1,0 +1,9 @@
+[submodule "exchange-server"]
+    path = exchange-server
+    url = git@github.com:Mosaic-Exchange/exchange-server.git
+    branch = main
+
+[submodule "llm-server"]
+    path = llm-server
+    url = git@github.com:Mosaic-Exchange/llm-server.git
+    branch = main
