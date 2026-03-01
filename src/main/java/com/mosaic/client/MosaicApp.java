@@ -18,6 +18,7 @@ public class MosaicApp extends Application {
         primaryStage.show();
 
         MainLayoutController controller = loader.getController();
+        Navigator.init(controller);
         controller.showSplash();
     }
 
