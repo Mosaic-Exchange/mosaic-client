@@ -1,6 +1,13 @@
 /* app.css — shared stylesheet for Mosaic client
-   TODO APP-2 (#6): Expand with full design system (colours, fonts, nav bar styles)
-   TODO APP-5 (#9): Add settings-driven theme support
+   Applied to every screen via MosaicApp.start().
+
+   TODO APP-6 (#10) — Full styling pass
+     AC1: Ensure this file is applied to every screen (already done via Scene)
+     AC2: Add consistent spacing/font rules for buttons, labels, panels
+     AC3: Add .message-bubble-user and .message-bubble-expert styles for chat
+
+   TODO APP-2 (#6): Expand nav bar / header styles once nav bar is added
+   TODO APP-5 (#9): Add settings-driven theme toggling (light/dark)
 */
 
 .root {
@@ -46,4 +53,12 @@
 
 .splash-button:hover {
     -fx-background-color: #b4d0fe;
+}
+
+/* Placeholder label shown in screens not yet implemented
+   TODO APP-6 (#10): Remove once real screen content is built */
+.screen-placeholder-label {
+    -fx-text-fill: #6c7086;
+    -fx-font-size: 18px;
+    -fx-font-style: italic;
 }
