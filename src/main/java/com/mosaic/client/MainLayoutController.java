@@ -27,18 +27,15 @@ public class MainLayoutController {
     }
 
     public void showWorkspace() {
-        // TODO APP-MW-1..MW-5 (#11-15): Replace placeholder with real workspace FXML
-        loadScreen("/fxml/SplashScreen.fxml");
+        loadScreen("/fxml/WorkspaceScreen.fxml");
     }
 
     public void showExpertSelection() {
-        // TODO APP-4 (#8): Replace placeholder with expert selection FXML
-        loadScreen("/fxml/SplashScreen.fxml");
+        loadScreen("/fxml/ExpertSelectionScreen.fxml");
     }
 
     public void showSettings() {
-        // TODO APP-5 (#9): Replace placeholder with settings FXML
-        loadScreen("/fxml/SplashScreen.fxml");
+        loadScreen("/fxml/SettingsScreen.fxml");
     }
 
     private void loadScreen(String fxmlPath) {
