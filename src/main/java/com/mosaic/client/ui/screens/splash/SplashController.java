@@ -1,14 +1,14 @@
 package com.mosaic.client.ui.screens.splash;
 
+import com.mosaic.client.Navigator;
 import javafx.fxml.FXML;
 
 public class SplashController {
 
-    // TODO APP-2 (#6): Inject MainLayoutController reference for navigation
+    // TODO APP-2 (#6): Add logo, status panel, and loading indicator per design doc (AC1, AC3)
 
     @FXML
     private void onGetStarted() {
-        // TODO APP-2 (#6): Call mainLayoutController.showWorkspace()
-        System.out.println("Get Started clicked — navigation not yet implemented.");
+        Navigator.showWorkspace();
     }
 }
