@@ -62,3 +62,41 @@
     -fx-font-size: 18px;
     -fx-font-style: italic;
 }
+
+/* ── Workspace layout panels (APP-MW-1, #11) ──────────────────
+   Structural colours only — full styling pass in APP-6 (#10).
+   ─────────────────────────────────────────────────────────── */
+.workspace-screen   { -fx-background-color: #1e1e2e; }
+
+.workspace-header {
+    -fx-background-color: #181825;
+    -fx-border-color: #313244;
+    -fx-border-width: 0 0 1 0;
+}
+
+.workspace-sidebar {
+    -fx-background-color: #181825;
+    -fx-border-color: #313244;
+    -fx-border-width: 0 1 0 0;
+}
+
+.chat-panel     { -fx-background-color: #1e1e2e; }
+
+.input-area {
+    -fx-background-color: #181825;
+    -fx-border-color: #313244;
+    -fx-border-width: 1 0 0 0;
+}
+
+.expert-panel {
+    -fx-background-color: #181825;
+    -fx-border-color: #313244;
+    -fx-border-width: 0 0 0 1;
+}
+
+/* Inline placeholder labels used inside workspace panels */
+.panel-placeholder-label {
+    -fx-text-fill: #45475a;
+    -fx-font-size: 13px;
+    -fx-font-style: italic;
+}
