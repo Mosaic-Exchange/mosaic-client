@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.control.Label?>
+
+<!--
+    Settings screen — structural placeholder.
+
+    TODO APP-5 (#9) — Full implementation
+        AC1: Add three sections (as separate VBox panels or a TabPane):
+               - Privacy & Sharing   (toggles)
+               - Network Configuration (dropdowns + text field for bootstrap nodes)
+               - Adapter Management  (list + action buttons)
+        AC2: Make all toggles/dropdowns/text fields interactive (bound to local state)
+        AC3: "Save" button → print current values to console OR show confirmation Alert
+        AC4: "Cancel" button → Navigator.showWorkspace()
+               (chosen behaviour: navigate back without saving — document this in PR)
+        AC5: No persistence required
+-->
+<BorderPane xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.mosaic.client.ui.screens.settings.SettingsController"
+            styleClass="settings-screen">
+
+    <center>
+        <Label text="Settings — coming in #9"
+               styleClass="screen-placeholder-label"/>
+    </center>
+
+</BorderPane>

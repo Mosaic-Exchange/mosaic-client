@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Button?>
+
+<!--
+    Splash screen — shown on launch.
+    TODO APP-2 (#6): Style and expand this into the real splash/landing screen.
+    TODO APP-MW-1 (#11): "Get Started" should navigate to the workspace.
+-->
+<VBox xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.mosaic.client.ui.screens.splash.SplashController"
+      alignment="CENTER" spacing="20"
+      styleClass="splash-screen">
+
+    <Label text="Mosaic" styleClass="splash-title"/>
+    <Label text="Your intelligent chat client" styleClass="splash-subtitle"/>
+    <Button text="Get Started" styleClass="splash-button" onAction="#onGetStarted"/>
+
+</VBox>

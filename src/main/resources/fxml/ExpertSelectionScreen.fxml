@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.control.Label?>
+
+<!--
+    Expert Selection screen — structural placeholder.
+
+    TODO APP-4 (#8) — Full implementation
+        AC1: Left filters panel with domain / source / availability dropdowns (no backend logic)
+        AC2: Centre list renders hardcoded expert entries
+        AC3: Clicking an expert updates the right preview/detail panel
+        AC4: "Confirm" button → Navigator.showWorkspace()  (show selected expert as placeholder text)
+        AC5: "Download" button → show a placeholder Alert or toast
+-->
+<BorderPane xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.mosaic.client.ui.screens.expert.ExpertSelectionController"
+            styleClass="expert-selection-screen">
+
+    <center>
+        <Label text="Expert Selection — coming in #8"
+               styleClass="screen-placeholder-label"/>
+    </center>
+
+</BorderPane>

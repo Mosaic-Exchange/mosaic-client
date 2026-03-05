@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.control.Label?>
+
+<!--
+    Main Workspace screen — structural placeholder.
+    Implementation is split across sub-issues #11-15:
+
+    TODO APP-MW-1 (#11): Replace center label with full BorderPane layout.
+        - Left sidebar panel (session list placeholder)
+        - Central chat panel placeholder
+        - Right expert detail panel placeholder
+        - Top expert status header placeholder
+
+    TODO APP-MW-2 (#12): Add session list sidebar + scrollable chat history.
+        - "New Session" and "Search Session" buttons
+        - Hardcoded session entries with click highlight
+        - Scrollable chat area with sample User + Expert message bubbles
+
+    TODO APP-MW-3 (#13): Add message input and Send interaction.
+        - TextField at bottom of chat panel
+        - Send button (Enter or click appends message, clears field, auto-scrolls)
+
+    TODO APP-MW-4 (#14): Add active expert header + right metadata panel.
+        - Header: Expert name, Source, Mode (hardcoded)
+        - Right panel: Domain, Status, Adapter name, File hash (hardcoded)
+
+    TODO APP-MW-5 (#15): Add workspace control buttons.
+        - "Switch Expert" → Navigator.showExpertSelection()
+        - "Clear Context" → clears chat panel (UI only)
+        - "End Session"  → confirmation dialog, then reset chat
+-->
+<BorderPane xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.mosaic.client.ui.screens.workspace.MainWorkspaceController"
+            styleClass="workspace-screen">
+
+    <center>
+        <Label text="Main Workspace — coming in #11-15"
+               styleClass="screen-placeholder-label"/>
+    </center>
+
+</BorderPane>

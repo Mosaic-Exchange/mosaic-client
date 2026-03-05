@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.StackPane?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.mosaic.client.MainLayoutController"
+            prefWidth="1024" prefHeight="700"
+            styleClass="main-layout">
+
+    <!--
+        TODO APP-2 (#6): Add <top> nav bar with Mosaic branding + navigation buttons
+    -->
+
+    <center>
+        <!-- Content screens are swapped in here by MainLayoutController -->
+        <StackPane fx:id="contentArea" styleClass="content-area"/>
+    </center>
+
+</BorderPane>
