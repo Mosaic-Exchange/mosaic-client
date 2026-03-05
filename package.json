@@ -1,0 +1,24 @@
+{
+  "name": "mosaic-client",
+  "version": "1.0.0",
+  "description": "Mosaic is a desktop chatbot client built with JavaFX 21. Users can select an AI or network-based expert, start chat sessions, send messages, view chat history, and manage settings. The client communicates with `exchange-server` and `llm-server` backends, but those integrations are handled separately; this repo contains only the client UI.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mosaic-Exchange/mosaic-client.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Mosaic-Exchange/mosaic-client/issues"
+  },
+  "homepage": "https://github.com/Mosaic-Exchange/mosaic-client#readme",
+  "devDependencies": {
+    "stylelint": "^17.4.0",
+    "stylelint-config-standard": "^40.0.0"
+  }
+}
