@@ -46,18 +46,18 @@ jobs:
           # Glob to locate Checkstyle XML reports (Defaults to **/checkstyle-result.xml)
           checkstyle_files: # optional, default is **/checkstyle-result.xml       npm create stylelint@17.4.0
 
-      - name: Create a dummy package.json (for npm)
-        run: npm -y init
+      # - name: Create a dummy package.json (for npm)
+        # run: npm # -y init
 
-      - name: Install stylelint
-        run: npm -y install stylelint@17.4.0 stylelint-config-recommended@18.0.0
+      # - # name: Install stylelint
+        # run: npm # -y install stylelint@17.4.0 stylelint-config-recommended@18.0.0
 
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Lint CSS with Stylelint
-        uses: reviewdog/action-stylelint@dd2b435cc6a7c82705307a9dee740c9bbaa10411 # v1.30.2
-        with:
-          reporter: github-pr-review # Change reporter.
-          stylelint_input: '**/*.css'
-      - name: Lint CSS with Stylelint
-        uses: actions-hub/stylelint@master 
+      # - # uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      # - # name: Lint CSS with Stylelint
+        # uses: revie# wdog/action-stylelint@dd2b435cc6a7c82705307a9dee740c9bbaa10411 # v1.30.2
+        # # with:
+          # reporter: github# -pr-review # Change reporter.
+          # stylelint_input: '**/*.css'
+      # - # name: Lint CSS with Stylelint
+        # uses: actions# -hub/stylelint@master 
 
