@@ -5,6 +5,10 @@
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.collections.FXCollections?>
+<?import java.lang.String?>
 
 <!--
     Main Workspace screen — layout structure only (APP-MW-1, #11).
@@ -36,7 +40,16 @@
         <VBox styleClass="workspace-sidebar" prefWidth="220" alignment="TOP_CENTER">
             <padding><Insets top="16" right="12" bottom="16" left="12"/></padding>
             <!-- TODO APP-MW-2 (#12): Replace with New Session button, Search Session button, session list -->
-            <Label text="[Sidebar] Session List — see #12" styleClass="panel-placeholder-label" wrapText="true"/>
+            <Button text="New Session"/>
+            <Button text="Search Session"/>
+            <ListView fx:id="sessionListView">
+                <items>
+                    <FXCollections fx:factory="observableArrayList">
+                        <String fx:value="Greek Recipes"/>
+                        <String fx:value="How to Make Tomatoes Grow"/>
+                    </FXCollections>
+                </items>
+            </ListView>
         </VBox>
     </left>
 
