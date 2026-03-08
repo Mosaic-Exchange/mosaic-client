@@ -79,6 +79,46 @@
     -fx-border-color: #313244;
     -fx-border-width: 0 1 0 0;
 }
+/* Sidebar buttons */
+.workspace-sidebar .button {
+    -fx-background-color: #313244;
+    -fx-text-fill: #cdd6f4;
+    -fx-background-radius: 6;
+    -fx-padding: 8 12;
+}
+
+.workspace-sidebar .button:hover {
+    -fx-background-color: #45475a;
+}
+
+/* Session list container */
+.workspace-sidebar .list-view {
+    -fx-background-color: #181825;
+    -fx-border-color: #313244;
+}
+
+/* Remove the default white background inside the list */
+.workspace-sidebar .list-view .viewport {
+    -fx-background-color: #181825;
+}
+
+/* Individual list items */
+.workspace-sidebar .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #cdd6f4;
+    -fx-padding: 6 10;
+}
+
+/* Hover effect */
+.workspace-sidebar .list-cell:hover {
+    -fx-background-color: #313244;
+}
+
+/* Selected session */
+.workspace-sidebar .list-cell:selected {
+    -fx-background-color: #89b4fa;
+    -fx-text-fill: #1e1e2e;
+}
 
 .chat-panel     { -fx-background-color: #1e1e2e; }
 
