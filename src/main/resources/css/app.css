@@ -85,6 +85,7 @@
     -fx-text-fill: #cdd6f4;
     -fx-background-radius: 6;
     -fx-padding: 8 12;
+    -fx-pref-width: 160px;
 }
 
 .workspace-sidebar .button:hover {
@@ -102,7 +103,15 @@
     -fx-background-color: #181825;
 }
 
-/* Individual list items */
+/* Alternate session list colors */
+.workspace-sidebar .list-cell:odd {
+    -fx-background-color: #1e1e2e; 
+}
+
+.workspace-sidebar .list-cell:even {
+    -fx-background-color: #262636;  
+}
+
 .workspace-sidebar .list-cell {
     -fx-background-color: transparent;
     -fx-text-fill: #cdd6f4;
