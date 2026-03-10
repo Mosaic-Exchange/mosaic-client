@@ -1,14 +1,21 @@
 /* app.css — Mosaic client shared stylesheet
-   Applied to every Screen via MosaicApp.start() — AC1 satisfied.
+   Applied to every screen via MosaicApp.start() — AC1 satisfied.
 
    Brand colour palette (APP-6, #10):
-     #1A2C4C  Space Indigo  — primary background
-     #142240  Deep Indigo   — panel / sidebar background
-     #2E4268  Steel Blue    — borders, dividers
-     #A1B5D8  Powder Blue   — secondary text, muted elements
-     #FFFCF7  Porcelain     — primary text
-     #E4F0D0  Frosted Mint  — hover state, accent light
-     #A3C497  Muted Olive   — primary action colour (buttons, CTA)
+     #1A2C4C  Space Indigo  — primary text, dark button fills
+     #A1B5D8  Powder Blue   — app background, sidebar, panel backgrounds
+     #FFFCF7  Porcelain     — card surfaces, chat area, input, session items
+     #E4F0D0  Frosted Mint  — send button, hover accent
+     #A3C497  Muted Olive   — active/selected states, CTA accents
+
+   Colour role mapping (matches wireframe):
+     Background       → Powder Blue  #A1B5D8
+     Card surfaces    → Porcelain    #FFFCF7
+     Text (primary)   → Space Indigo #1A2C4C
+     Text (secondary) → #3D5478
+     Borders          → #8BA3C4
+     Dark buttons     → Space Indigo #1A2C4C  with Porcelain text
+     Send / CTA       → Frosted Mint #E4F0D0  with Space Indigo text
 
    TODO APP-2 (#6): Add nav bar styles once nav bar FXML is added.
    TODO APP-5 (#9): Add settings-driven theme toggling.
@@ -18,32 +25,32 @@
 .root {
     -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     -fx-font-size: 14px;
-    -fx-background-color: #1A2C4C;
+    -fx-background-color: #A1B5D8;
 }
 
-.main-layout  { -fx-background-color: #1A2C4C; }
-.content-area { -fx-background-color: #1A2C4C; }
+.main-layout  { -fx-background-color: #A1B5D8; }
+.content-area { -fx-background-color: #A1B5D8; }
 
 /* ── Splash screen ──────────────────────────────────────── */
 .splash-screen {
-    -fx-background-color: #1A2C4C;
+    -fx-background-color: #A1B5D8;
     -fx-padding: 60;
 }
 
 .splash-title {
-    -fx-text-fill: #FFFCF7;
+    -fx-text-fill: #1A2C4C;
     -fx-font-size: 48px;
     -fx-font-weight: bold;
 }
 
 .splash-subtitle {
-    -fx-text-fill: #A1B5D8;
+    -fx-text-fill: #3D5478;
     -fx-font-size: 16px;
 }
 
 .splash-button {
-    -fx-background-color: #A3C497;
-    -fx-text-fill: #1A2C4C;
+    -fx-background-color: #1A2C4C;
+    -fx-text-fill: #FFFCF7;
     -fx-font-size: 14px;
     -fx-font-weight: bold;
     -fx-padding: 10 28;
@@ -52,48 +59,53 @@
 }
 
 .splash-button:hover {
-    -fx-background-color: #E4F0D0;
+    -fx-background-color: #2E4268;
 }
 
 /* ── Placeholder labels ─────────────────────────────────── */
 .screen-placeholder-label {
-    -fx-text-fill: #2E4268;
+    -fx-text-fill: #8BA3C4;
     -fx-font-size: 18px;
     -fx-font-style: italic;
 }
 
 .panel-placeholder-label {
-    -fx-text-fill: #2E4268;
+    -fx-text-fill: #8BA3C4;
     -fx-font-size: 13px;
     -fx-font-style: italic;
 }
 
 /* ── Workspace layout panels (APP-MW-1, #11) ────────────── */
-.workspace-screen { -fx-background-color: #1A2C4C; }
+.workspace-screen { -fx-background-color: #A1B5D8; }
 
+/* Header — Porcelain surface with a subtle bottom border */
 .workspace-header {
-    -fx-background-color: #142240;
-    -fx-border-color: #2E4268;
+    -fx-background-color: #FFFCF7;
+    -fx-border-color: #8BA3C4;
     -fx-border-width: 0 0 1 0;
 }
 
+/* Sidebar — blends with app background, right border only */
 .workspace-sidebar {
-    -fx-background-color: #142240;
-    -fx-border-color: #2E4268;
+    -fx-background-color: #A1B5D8;
+    -fx-border-color: #8BA3C4;
     -fx-border-width: 0 1 0 0;
 }
 
-.chat-panel { -fx-background-color: #1A2C4C; }
+/* Chat outer container */
+.chat-panel { -fx-background-color: #A1B5D8; }
 
+/* Message input bar — Porcelain surface with top border */
 .input-area {
-    -fx-background-color: #142240;
-    -fx-border-color: #2E4268;
+    -fx-background-color: #FFFCF7;
+    -fx-border-color: #8BA3C4;
     -fx-border-width: 1 0 0 0;
 }
 
+/* Right expert panel — blends with background, left border */
 .expert-panel {
-    -fx-background-color: #142240;
-    -fx-border-color: #2E4268;
+    -fx-background-color: #A1B5D8;
+    -fx-border-color: #8BA3C4;
     -fx-border-width: 0 0 0 1;
 }
 
@@ -101,9 +113,49 @@
    Use these classes on any screen for uniform spacing + font.
    ─────────────────────────────────────────────────────────── */
 
-/* Primary button — main actions (Confirm, Get Started, Send) */
+/* Primary button — dark fill (Switch Expert, End Session, Confirm) */
 .btn-primary {
-    -fx-background-color: #A3C497;
+    -fx-background-color: #1A2C4C;
+    -fx-text-fill: #FFFCF7;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-padding: 8 20;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+.btn-primary:hover { -fx-background-color: #2E4268; }
+
+/* Secondary button — outlined, for lower-priority actions */
+.btn-secondary {
+    -fx-background-color: transparent;
+    -fx-text-fill: #1A2C4C;
+    -fx-font-size: 13px;
+    -fx-padding: 8 20;
+    -fx-border-color: #1A2C4C;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+.btn-secondary:hover {
+    -fx-background-color: #D0DCEE;
+}
+
+/* Danger button — for destructive actions */
+.btn-danger {
+    -fx-background-color: transparent;
+    -fx-text-fill: #b94040;
+    -fx-font-size: 13px;
+    -fx-padding: 8 20;
+    -fx-border-color: #b94040;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+.btn-danger:hover { -fx-background-color: #f5dada; }
+
+/* CTA button — Send, positive confirmation (Frosted Mint) */
+.btn-cta {
+    -fx-background-color: #E4F0D0;
     -fx-text-fill: #1A2C4C;
     -fx-font-weight: bold;
     -fx-font-size: 13px;
@@ -111,58 +163,29 @@
     -fx-background-radius: 6;
     -fx-cursor: hand;
 }
-.btn-primary:hover { -fx-background-color: #E4F0D0; }
-
-/* Secondary button — non-destructive secondary actions */
-.btn-secondary {
-    -fx-background-color: transparent;
-    -fx-text-fill: #A1B5D8;
-    -fx-font-size: 13px;
-    -fx-padding: 8 20;
-    -fx-border-color: #A1B5D8;
-    -fx-border-radius: 6;
-    -fx-background-radius: 6;
-    -fx-cursor: hand;
-}
-.btn-secondary:hover {
-    -fx-background-color: #1E3560;
-    -fx-text-fill: #FFFCF7;
-}
-
-/* Danger button — destructive actions (End Session) */
-.btn-danger {
-    -fx-background-color: transparent;
-    -fx-text-fill: #e57373;
-    -fx-font-size: 13px;
-    -fx-padding: 8 20;
-    -fx-border-color: #e57373;
-    -fx-border-radius: 6;
-    -fx-background-radius: 6;
-    -fx-cursor: hand;
-}
-.btn-danger:hover { -fx-background-color: #2a1515; }
+.btn-cta:hover { -fx-background-color: #A3C497; }
 
 /* Label hierarchy */
 .label-title {
-    -fx-text-fill: #FFFCF7;
+    -fx-text-fill: #1A2C4C;
     -fx-font-size: 18px;
     -fx-font-weight: bold;
 }
 
 .label-body {
-    -fx-text-fill: #FFFCF7;
+    -fx-text-fill: #1A2C4C;
     -fx-font-size: 13px;
 }
 
 .label-muted {
-    -fx-text-fill: #A1B5D8;
+    -fx-text-fill: #3D5478;
     -fx-font-size: 12px;
 }
 
-/* Card panel — contained region with border and padding */
+/* Card panel — Porcelain surface with subtle border */
 .card {
-    -fx-background-color: #142240;
-    -fx-border-color: #2E4268;
+    -fx-background-color: #FFFCF7;
+    -fx-border-color: #8BA3C4;
     -fx-border-width: 1;
     -fx-border-radius: 6;
     -fx-background-radius: 6;
@@ -183,10 +206,13 @@
              └─ Label (message text)
    ─────────────────────────────────────────────────────────── */
 
-/* User bubble — right side, Muted Olive background */
+/* User bubble — Porcelain card, right side */
 .message-bubble-user {
-    -fx-background-color: #A3C497;
+    -fx-background-color: #FFFCF7;
     -fx-background-radius: 12 12 2 12;
+    -fx-border-color: #8BA3C4;
+    -fx-border-width: 1;
+    -fx-border-radius: 12 12 2 12;
     -fx-padding: 10 14;
     -fx-max-width: 480;
 }
@@ -196,25 +222,25 @@
     -fx-wrap-text: true;
 }
 
-/* Expert bubble — left side, Deep Indigo background with border */
+/* Expert bubble — Porcelain card, left side */
 .message-bubble-expert {
-    -fx-background-color: #142240;
+    -fx-background-color: #FFFCF7;
     -fx-background-radius: 12 12 12 2;
-    -fx-border-color: #2E4268;
+    -fx-border-color: #8BA3C4;
     -fx-border-width: 1;
     -fx-border-radius: 12 12 12 2;
     -fx-padding: 10 14;
     -fx-max-width: 620;
 }
 .message-bubble-expert > .label {
-    -fx-text-fill: #FFFCF7;
+    -fx-text-fill: #1A2C4C;
     -fx-font-size: 13px;
     -fx-wrap-text: true;
 }
 
-/* Sender name shown above an expert bubble ("Mosaic" / expert name) */
+/* Sender name above an expert bubble ("Mosaic" / expert name) */
 .message-sender-label {
-    -fx-text-fill: #A1B5D8;
+    -fx-text-fill: #3D5478;
     -fx-font-size: 11px;
     -fx-font-weight: bold;
     -fx-padding: 0 0 2 4;
