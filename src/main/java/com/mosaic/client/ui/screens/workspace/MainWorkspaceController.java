@@ -1,6 +1,5 @@
 package com.mosaic.client.ui.screens.workspace;
 
-import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
@@ -42,13 +41,23 @@ public class MainWorkspaceController {
 
     @FXML
     public void initialize() {
-        // AC3: pressing Enter sends the message; Shift+Enter inserts a newline
+        // AC3: Enter sends; Shift+Enter inserts a newline.
+        // Both cases consume the event so JavaFX does not also insert a newline on send.
         messageInput.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
-            if (event.getCode() == KeyCode.ENTER && !event.isShiftDown()) {
+            if (event.getCode() == KeyCode.ENTER) {
                 event.consume();
-                onSend();
+                if (event.isShiftDown()) {
+                    messageInput.insertText(messageInput.getCaretPosition(), "\n");
+                } else {
+                    onSend();
+                }
             }
         });
+
+        // AC4: scroll to bottom whenever the chat history grows.
+        // Height listener fires after layout is measured — more reliable than Platform.runLater.
+        chatHistory.heightProperty().addListener(
+                (obs, oldHeight, newHeight) -> chatScrollPane.setVvalue(1.0));
     }
 
     // ── AC3: Send button handler ─────────────────────────────
@@ -57,9 +66,8 @@ public class MainWorkspaceController {
         String text = messageInput.getText().trim();
         if (text.isEmpty()) return;
 
-        appendUserMessage(text);  // AC3: append to chat window
-        messageInput.clear();     // AC3: clear the input field
-        scrollToBottom();         // AC4: scroll to latest message
+        appendUserMessage(text); // AC3: append to chat window
+        messageInput.clear();    // AC3: clear the input field
     }
 
     // ── Helpers ──────────────────────────────────────────────
@@ -77,10 +85,5 @@ public class MainWorkspaceController {
 
         row.getChildren().add(bubble);
         chatHistory.getChildren().add(row);
-    }
-
-    private void scrollToBottom() {
-        // Platform.runLater ensures the layout pass has completed before scrolling
-        Platform.runLater(() -> chatScrollPane.setVvalue(1.0));
     }
 }
