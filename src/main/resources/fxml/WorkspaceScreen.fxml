@@ -37,7 +37,7 @@
 
     <!-- LEFT — session list sidebar placeholder -->
     <left>
-        <VBox styleClass="workspace-sidebar" prefWidth="220" alignment="TOP_CENTER">
+        <VBox styleClass="workspace-sidebar" prefWidth="220" alignment="TOP_CENTER" spacing="10">
             <padding><Insets top="16" right="12" bottom="16" left="12"/></padding>
             <!-- TODO APP-MW-2 (#12): Replace with New Session button, Search Session button, session list -->
             <Button text="New Session"/>
@@ -57,8 +57,11 @@
     <center>
         <BorderPane styleClass="chat-panel">
             <center>
-                <!-- TODO APP-MW-2 (#12): Replace with scrollable chat history -->
-                <Label text="[Center] Chat History — see #12" styleClass="panel-placeholder-label"/>
+                <VBox fx:id="chatContainer"
+                    spacing="10"
+                    alignment="TOP_LEFT"
+                    styleClass="chat-panel">
+                </VBox>
             </center>
             <bottom>
                 <!-- TODO APP-MW-3 (#13): Replace with message TextArea + Send button -->

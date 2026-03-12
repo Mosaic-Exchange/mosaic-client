@@ -149,3 +149,21 @@
     -fx-font-size: 13px;
     -fx-font-style: italic;
 }
+
+.message-bubble-user {
+    -fx-background-color: #89b4fa;
+    -fx-text-fill: #1e1e2e;
+    -fx-padding: 10 14;
+    -fx-background-radius: 12;
+    -fx-wrap-text: true;
+    -fx-max-width: 420;
+}
+
+.message-bubble-expert {
+    -fx-background-color: #313244;
+    -fx-text-fill: #cdd6f4;
+    -fx-padding: 10 14;
+    -fx-background-radius: 12;
+    -fx-wrap-text: true;
+    -fx-max-width: 420;
+}
