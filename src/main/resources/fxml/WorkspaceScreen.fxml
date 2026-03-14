@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextArea?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
@@ -44,14 +47,23 @@
     <center>
         <BorderPane styleClass="chat-panel">
             <center>
-                <!-- TODO APP-MW-2 (#12): Replace with scrollable chat history -->
-                <Label text="[Center] Chat History — see #12" styleClass="panel-placeholder-label"/>
+                <!-- chatHistory VBox is the append target for messages (APP-MW-3, #13).
+                     TODO APP-MW-2 (#12): Prepopulate chatHistory with hardcoded sample messages. -->
+                <ScrollPane fx:id="chatScrollPane" fitToWidth="true"
+                            styleClass="chat-scroll" hbarPolicy="NEVER">
+                    <VBox fx:id="chatHistory" styleClass="chat-history" spacing="10">
+                        <padding><Insets top="12" right="16" bottom="12" left="16"/></padding>
+                    </VBox>
+                </ScrollPane>
             </center>
             <bottom>
-                <!-- TODO APP-MW-3 (#13): Replace with message TextArea + Send button -->
-                <HBox styleClass="input-area" minHeight="60" alignment="CENTER">
+                <!-- AC1: text input field, AC2: Send button -->
+                <HBox styleClass="input-area" spacing="8" alignment="CENTER">
                     <padding><Insets top="8" right="12" bottom="8" left="12"/></padding>
-                    <Label text="[Bottom] Message Input — see #13" styleClass="panel-placeholder-label"/>
+                    <TextArea fx:id="messageInput" styleClass="message-input"
+                              HBox.hgrow="ALWAYS" prefRowCount="2" wrapText="true"
+                              promptText="Type a message… (Enter to send, Shift+Enter for new line)"/>
+                    <Button text="Send" styleClass="btn-cta" onAction="#onSend"/>
                 </HBox>
             </bottom>
         </BorderPane>
