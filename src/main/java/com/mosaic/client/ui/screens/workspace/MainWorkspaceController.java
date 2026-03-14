@@ -2,6 +2,9 @@ package com.mosaic.client.ui.screens.workspace;
 
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
@@ -10,11 +13,14 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
+import com.mosaic.client.Navigator;
+
 /**
  * Controller for the Main Workspace screen.
  *
  * APP-MW-1 (#11): Layout structure          — DONE
- * APP-MW-3 (#13): Message input + send      — DONE (this class)
+ * APP-MW-3 (#13): Message input + send      — DONE
+ * APP-MW-5 (#15): Workspace controls        — DONE (this class)
  *
  * Teammates: add your @FXML fields and logic in the section for your issue:
  *
@@ -24,9 +30,9 @@ import javafx.scene.layout.VBox;
  *   TODO APP-MW-4 (#14): Inject header labels and right-panel metadata labels;
  *                         bind to hardcoded active expert data.
  *
- *   TODO APP-MW-5 (#15): Wire Switch Expert → Navigator.showExpertSelection();
- *                         wire Clear Context (chatHistory.getChildren().clear());
- *                         wire End Session (confirmation dialog, then clear).
+ *   TODO APP-MW-5 (#15): Wire Switch Expert → Navigator.showExpertSelection();  — DONE
+ *                         wire Clear Context (chatHistory.getChildren().clear()); — DONE
+ *                         wire End Session (confirmation dialog, then clear).     — DONE
  */
 public class MainWorkspaceController {
 
@@ -37,7 +43,11 @@ public class MainWorkspaceController {
 
     // ── TODO APP-MW-2 (#12): add @FXML session list field here
     // ── TODO APP-MW-4 (#14): add @FXML header/metadata label fields here
-    // ── TODO APP-MW-5 (#15): add @FXML control button fields here
+
+    // ── APP-MW-5 (#15) fields ────────────────────────────────
+    @FXML private Button switchExpertBtn;
+    @FXML private Button clearContextBtn;
+    @FXML private Button endSessionBtn;
 
     @FXML
     public void initialize() {
@@ -68,6 +78,33 @@ public class MainWorkspaceController {
 
         appendUserMessage(text); // AC3: append to chat window
         messageInput.clear();    // AC3: clear the input field
+    }
+
+    // ── APP-MW-5 (#15): Workspace control handlers ───────────
+
+    @FXML
+    private void onSwitchExpert() {
+        Navigator.showExpertSelection();
+    }
+
+    @FXML
+    private void onClearContext() {
+        chatHistory.getChildren().clear();
+    }
+
+    @FXML
+    private void onEndSession() {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+                "End this session? All messages will be cleared.",
+                ButtonType.OK, ButtonType.CANCEL);
+        confirm.setTitle("End Session");
+        confirm.setHeaderText(null);
+        confirm.showAndWait()
+               .filter(btn -> btn == ButtonType.OK)
+               .ifPresent(btn -> {
+                   chatHistory.getChildren().clear();
+                   messageInput.clear();
+               });
     }
 
     // ── Helpers ──────────────────────────────────────────────

@@ -7,6 +7,7 @@
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 
 <!--
@@ -69,13 +70,25 @@
         </BorderPane>
     </center>
 
-    <!-- RIGHT — expert details panel placeholder -->
+    <!-- RIGHT — expert details panel + workspace controls -->
     <right>
         <VBox styleClass="expert-panel" prefWidth="200" alignment="TOP_CENTER">
             <padding><Insets top="16" right="12" bottom="16" left="12"/></padding>
             <!-- TODO APP-MW-4 (#14): Replace with expert metadata labels -->
-            <!-- TODO APP-MW-5 (#15): Add End Session and Clear Context buttons at bottom -->
             <Label text="[Right] Expert Details — see #14" styleClass="panel-placeholder-label" wrapText="true"/>
+
+            <!-- Spacer pushes controls to the bottom -->
+            <Region VBox.vgrow="ALWAYS"/>
+
+            <!-- APP-MW-5 (#15): Workspace control buttons -->
+            <VBox styleClass="workspace-controls" spacing="10" alignment="BOTTOM_CENTER">
+                <Button fx:id="switchExpertBtn" text="Switch Expert" styleClass="btn-primary"
+                        maxWidth="Infinity" onAction="#onSwitchExpert"/>
+                <Button fx:id="clearContextBtn" text="Clear Context" styleClass="btn-secondary"
+                        maxWidth="Infinity" onAction="#onClearContext"/>
+                <Button fx:id="endSessionBtn" text="End Session" styleClass="btn-danger"
+                        maxWidth="Infinity" onAction="#onEndSession"/>
+            </VBox>
         </VBox>
     </right>
 
