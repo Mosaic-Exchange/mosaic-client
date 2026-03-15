@@ -86,7 +86,7 @@
                         maxWidth="Infinity" onAction="#onSwitchExpert"/>
                 <Button fx:id="clearContextBtn" text="Clear Context" styleClass="btn-secondary"
                         maxWidth="Infinity" onAction="#onClearContext"/>
-                <Button fx:id="endSessionBtn" text="End Session" styleClass="btn-danger"
+                <Button fx:id="endSessionBtn" text="End Session" styleClass="btn-primary"
                         maxWidth="Infinity" onAction="#onEndSession"/>
             </VBox>
         </VBox>
