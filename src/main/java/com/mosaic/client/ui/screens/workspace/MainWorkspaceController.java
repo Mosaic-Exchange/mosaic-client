@@ -30,9 +30,9 @@ import com.mosaic.client.Navigator;
  *   TODO APP-MW-4 (#14): Inject header labels and right-panel metadata labels;
  *                         bind to hardcoded active expert data.
  *
- *   TODO APP-MW-5 (#15): Wire Switch Expert → Navigator.showExpertSelection();  — DONE
- *                         wire Clear Context (chatHistory.getChildren().clear()); — DONE
- *                         wire End Session (confirmation dialog, then clear).     — DONE
+ *   APP-MW-5 (#15): Wire Switch Expert → Navigator.showExpertSelection();        — DONE
+ *                   wire Clear Context (chatHistory.getChildren().clear());      — DONE
+ *                   wire End Session (confirmation dialog, then clear).          — DONE
  */
 public class MainWorkspaceController {
 
