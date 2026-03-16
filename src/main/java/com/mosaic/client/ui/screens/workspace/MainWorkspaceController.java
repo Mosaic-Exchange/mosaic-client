@@ -9,6 +9,8 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.control.ListView;
+import javafx.geometry.Insets;
 
 /**
  * Controller for the Main Workspace screen.
@@ -29,6 +31,11 @@ import javafx.scene.layout.VBox;
  *                         wire End Session (confirmation dialog, then clear).
  */
 public class MainWorkspaceController {
+
+    // ── MW-2 fields ──────────────────────────────────────────
+    @FXML
+    private ListView<String> sessionListView;
+
 
     // ── APP-MW-3 (#13) fields ────────────────────────────────
     @FXML private ScrollPane chatScrollPane;
@@ -58,6 +65,19 @@ public class MainWorkspaceController {
         // Height listener fires after layout is measured — more reliable than Platform.runLater.
         chatHistory.heightProperty().addListener(
                 (obs, oldHeight, newHeight) -> chatScrollPane.setVvalue(1.0));
+
+        sessionListView.getSelectionModel().selectedItemProperty().addListener(
+            (obs, oldSession, newSession) -> {
+                if (newSession != null) {
+                    loadChat(newSession);
+                }
+            }
+        );
+        if (!sessionListView.getItems().isEmpty()) {
+            sessionListView.getSelectionModel().selectFirst();
+        }
+        chatHistory.setPadding(new Insets(12, 16, 12, 16));
+        chatHistory.setSpacing(8);
     }
 
     // ── AC3: Send button handler ─────────────────────────────
@@ -78,6 +98,49 @@ public class MainWorkspaceController {
 
         VBox bubble = new VBox();
         bubble.getStyleClass().add("message-bubble-user");
+
+        Label label = new Label(text);
+        label.setWrapText(true);
+        bubble.getChildren().add(label);
+
+        row.getChildren().add(bubble);
+        chatHistory.getChildren().add(row);
+    }
+
+    private void loadChat(String sessionName) {
+        chatHistory.getChildren().clear();
+        if (sessionName.equals("Greek Recipes")) {
+            addUserMessage("How do I make tzaziki?");
+            addExpertMessage("You have to mix yogurt, grated cucumber a lot of dill, olive oil and garlic.");
+        } else if (sessionName.equals("How to Make Tomatoes Grow")) {
+            addUserMessage("How do I make sure my tomatoes are growing?");
+            addExpertMessage("Tomatoes grow best in full sunlight.");
+            addUserMessage("How often should I water them?");
+            addExpertMessage("Water deeply bout 2-3 times per week.");
+        }
+    }
+
+    private void addUserMessage(String text) {
+        HBox row = new HBox();
+        row.setAlignment(Pos.CENTER_RIGHT);
+
+        VBox bubble = new VBox();
+        bubble.getStyleClass().add("message-bubble-user");
+
+        Label label = new Label(text);
+        label.setWrapText(true);
+        bubble.getChildren().add(label);
+
+        row.getChildren().add(bubble);
+        chatHistory.getChildren().add(row);
+    }
+
+    private void addExpertMessage(String text) {
+        HBox row = new HBox();
+        row.setAlignment(Pos.CENTER_LEFT);
+
+        VBox bubble = new VBox();
+        bubble.getStyleClass().add("message-bubble-expert");
 
         Label label = new Label(text);
         label.setWrapText(true);
