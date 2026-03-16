@@ -45,9 +45,8 @@ public class MainWorkspaceController {
     // ── TODO APP-MW-4 (#14): add @FXML header/metadata label fields here
 
     // ── APP-MW-5 (#15) fields ────────────────────────────────
-    @FXML private Button switchExpertBtn;
-    @FXML private Button clearContextBtn;
-    @FXML private Button endSessionBtn;
+
+
 
     @FXML
     public void initialize() {
