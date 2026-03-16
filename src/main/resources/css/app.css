@@ -93,21 +93,21 @@
 }
 /* Sidebar buttons */
 .workspace-sidebar .button {
-    -fx-background-color: #313244;
-    -fx-text-fill: #cdd6f4;
+    -fx-background-color: #FFFCF7;
+    -fx-text-fill: #1A2C4C;
     -fx-background-radius: 6;
     -fx-padding: 8 12;
     -fx-pref-width: 160px;
 }
 
 .workspace-sidebar .button:hover {
-    -fx-background-color: #45475a;
+    -fx-background-color: #E4F0D0;
 }
 
 /* Session list container */
 .workspace-sidebar .list-view {
-    -fx-background-color: #181825;
-    -fx-border-color: #313244;
+    -fx-background-color: #A1B5D8;
+    -fx-border-color: #8BA3C4;
 }
 
 /* Remove the default white background inside the list */
@@ -117,28 +117,28 @@
 
 /* Alternate session list colors */
 .workspace-sidebar .list-cell:odd {
-    -fx-background-color: #1e1e2e; 
+    -fx-background-color: #FFFCF7; 
 }
 
 .workspace-sidebar .list-cell:even {
-    -fx-background-color: #262636;  
+    -fx-background-color: #d5e6cf;  
 }
 
 .workspace-sidebar .list-cell {
     -fx-background-color: transparent;
-    -fx-text-fill: #cdd6f4;
+    -fx-text-fill: #1A2C4C;
     -fx-padding: 6 10;
 }
 
 /* Hover effect */
 .workspace-sidebar .list-cell:hover {
-    -fx-background-color: #313244;
+    -fx-background-color: #6b8861;
 }
 
 /* Selected session */
 .workspace-sidebar .list-cell:selected {
-    -fx-background-color: #89b4fa;
-    -fx-text-fill: #1e1e2e;
+    -fx-background-color: #A3C497;
+    -fx-text-fill: #FFFCF7;
 }
 
 /* Chat outer container */
@@ -315,22 +315,4 @@
     -fx-font-size: 11px;
     -fx-font-weight: bold;
     -fx-padding: 0 0 2 4;
-}
-
-.message-bubble-user {
-    -fx-background-color: #89b4fa;
-    -fx-text-fill: #1e1e2e;
-    -fx-padding: 10 14;
-    -fx-background-radius: 12;
-    -fx-wrap-text: true;
-    -fx-max-width: 420;
-}
-
-.message-bubble-expert {
-    -fx-background-color: #313244;
-    -fx-text-fill: #cdd6f4;
-    -fx-padding: 10 14;
-    -fx-background-radius: 12;
-    -fx-wrap-text: true;
-    -fx-max-width: 420;
 }

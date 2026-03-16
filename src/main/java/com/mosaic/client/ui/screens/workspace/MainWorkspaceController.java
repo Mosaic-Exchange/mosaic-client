@@ -125,18 +125,32 @@ public class MainWorkspaceController {
 
     
     private void addUserMessage(String text) {
+        HBox row = new HBox();
+        row.setAlignment(Pos.CENTER_RIGHT);
+
+        VBox bubble = new VBox();
+        bubble.getStyleClass().add("message-bubble-user");
+
         Label label = new Label(text);
-        label.getStyleClass().add("message-bubble-user");
-        HBox box = new HBox(label);
-        box.setAlignment(Pos.CENTER_RIGHT);
-        chatHistory.getChildren().add(box);
+        label.setWrapText(true);
+        bubble.getChildren().add(label);
+
+        row.getChildren().add(bubble);
+        chatHistory.getChildren().add(row);
     }   
 
     private void addExpertMessage(String text) {
+        HBox row = new HBox();
+        row.setAlignment(Pos.CENTER_LEFT);
+
+        VBox bubble = new VBox();
+        bubble.getStyleClass().add("message-bubble-expert");
+
         Label label = new Label(text);
-        label.getStyleClass().add("message-bubble-expert");
-        HBox box = new HBox(label);
-        box.setAlignment(Pos.CENTER_LEFT);
-        chatHistory.getChildren().add(box);
+        label.setWrapText(true);
+        bubble.getChildren().add(label);
+
+        row.getChildren().add(bubble);
+        chatHistory.getChildren().add(row);
     }
 }
