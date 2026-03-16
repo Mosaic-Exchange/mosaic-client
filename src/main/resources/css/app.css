@@ -91,6 +91,55 @@
     -fx-border-color: #8BA3C4;
     -fx-border-width: 0 1 0 0;
 }
+/* Sidebar buttons */
+.workspace-sidebar .button {
+    -fx-background-color: #FFFCF7;
+    -fx-text-fill: #1A2C4C;
+    -fx-background-radius: 6;
+    -fx-padding: 8 12;
+    -fx-pref-width: 160px;
+}
+
+.workspace-sidebar .button:hover {
+    -fx-background-color: #E4F0D0;
+}
+
+/* Session list container */
+.workspace-sidebar .list-view {
+    -fx-background-color: #A1B5D8;
+    -fx-border-color: #8BA3C4;
+}
+
+/* Remove the default white background inside the list */
+.workspace-sidebar .list-view .viewport {
+    -fx-background-color: transparent;
+}
+
+/* Alternate session list colors */
+.workspace-sidebar .list-cell:odd {
+    -fx-background-color: #FFFCF7;
+}
+
+.workspace-sidebar .list-cell:even {
+    -fx-background-color: #d5e6cf;
+}
+
+.workspace-sidebar .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #1A2C4C;
+    -fx-padding: 6 10;
+}
+
+/* Hover effect */
+.workspace-sidebar .list-cell:hover {
+    -fx-background-color: #6b8861;
+}
+
+/* Selected session */
+.workspace-sidebar .list-cell:selected {
+    -fx-background-color: #A3C497;
+    -fx-text-fill: #FFFCF7;
+}
 
 /* Chat outer container */
 .chat-panel { -fx-background-color: #A1B5D8; }
