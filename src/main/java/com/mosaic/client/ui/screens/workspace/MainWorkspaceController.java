@@ -7,6 +7,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Separator;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -20,6 +21,7 @@ import com.mosaic.client.Navigator;
  *
  * APP-MW-1 (#11): Layout structure          — DONE
  * APP-MW-3 (#13): Message input + send      — DONE
+ * APP-MW-4 (#14): Expert metadata panel     — DONE (this class)
  * APP-MW-5 (#15): Workspace controls        — DONE (this class)
  *
  * Teammates: add your @FXML fields and logic in the section for your issue:
@@ -27,12 +29,10 @@ import com.mosaic.client.Navigator;
  *   TODO APP-MW-2 (#12): Inject session list and wire New/Search Session buttons;
  *                         prepopulate chatHistory with hardcoded sample messages.
  *
- *   TODO APP-MW-4 (#14): Inject header labels and right-panel metadata labels;
- *                         bind to hardcoded active expert data.
- *
- *   TODO APP-MW-5 (#15): Wire Switch Expert → Navigator.showExpertSelection();  — DONE
- *                         wire Clear Context (chatHistory.getChildren().clear()); — DONE
- *                         wire End Session (confirmation dialog, then clear).     — DONE
+ *   APP-MW-4 (#14): Header labels and right-panel metadata labels              — DONE
+ *   APP-MW-5 (#15): Wire Switch Expert → Navigator.showExpertSelection();      — DONE
+ *                    wire Clear Context (chatHistory.getChildren().clear());    — DONE
+ *                    wire End Session (confirmation dialog, then clear).        — DONE
  */
 public class MainWorkspaceController {
 
@@ -42,7 +42,16 @@ public class MainWorkspaceController {
     @FXML private TextArea   messageInput;
 
     // ── TODO APP-MW-2 (#12): add @FXML session list field here
-    // ── TODO APP-MW-4 (#14): add @FXML header/metadata label fields here
+
+    // ── APP-MW-4 (#14) fields ────────────────────────────────
+    @FXML private Label headerExpertName;
+    @FXML private Label headerExpertSource;
+    @FXML private Label headerExpertMode;
+    @FXML private Label metaExpertName;
+    @FXML private Label metaExpertDomain;
+    @FXML private Label metaExpertSource;
+    @FXML private Label metaAdapterFile;
+    @FXML private Label metaExpertStatus;
 
     // ── APP-MW-5 (#15) fields ────────────────────────────────
     @FXML private Button switchExpertBtn;
@@ -68,6 +77,25 @@ public class MainWorkspaceController {
         // Height listener fires after layout is measured — more reliable than Platform.runLater.
         chatHistory.heightProperty().addListener(
                 (obs, oldHeight, newHeight) -> chatScrollPane.setVvalue(1.0));
+
+        // APP-MW-4 (#14): Populate with hardcoded expert data.
+        // Will be replaced with real adapter data when AI integration lands.
+        loadActiveExpert("Gardening Expert", "Gardening", "Local",
+                         "gardening_expert.gguf", "Connected");
+    }
+
+    // ── APP-MW-4 (#14): Expert metadata helpers ──────────────
+
+    private void loadActiveExpert(String name, String domain, String source,
+                                  String adapterFile, String status) {
+        headerExpertName.setText(name);
+        headerExpertSource.setText(source);
+        headerExpertMode.setText("Inference");
+        metaExpertName.setText(name);
+        metaExpertDomain.setText(domain);
+        metaExpertSource.setText(source);
+        metaAdapterFile.setText(adapterFile);
+        metaExpertStatus.setText(status);
     }
 
     // ── AC3: Send button handler ─────────────────────────────

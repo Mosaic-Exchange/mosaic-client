@@ -267,3 +267,19 @@
     -fx-font-weight: bold;
     -fx-padding: 0 0 2 4;
 }
+
+/* ── Expert metadata panel (APP-MW-4, #14) ──────────────── */
+
+/* Status badge — connected (green) */
+.expert-status-connected {
+    -fx-text-fill: #2e7d32;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+/* Status badge — disconnected (muted red) */
+.expert-status-disconnected {
+    -fx-text-fill: #b94040;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
