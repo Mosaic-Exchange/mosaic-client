@@ -7,7 +7,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.control.Separator;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -55,7 +54,6 @@ public class MainWorkspaceController {
 
     // ── APP-MW-5 (#15) fields ────────────────────────────────
     @FXML private Button clearContextBtn;
-    @FXML private Button endSessionBtn;
 
     @FXML
     public void initialize() {
