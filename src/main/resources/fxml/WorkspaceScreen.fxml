@@ -36,6 +36,7 @@
             <Label fx:id="headerExpertMode" text="Inference" styleClass="label-muted"/>
             <Region HBox.hgrow="ALWAYS"/>
             <Button text="Switch Expert" styleClass="btn-primary" onAction="#onSwitchExpert"/>
+            <Button text="Settings" styleClass="btn-primary" onAction="#onOpenSettings"/>
         </HBox>
     </top>
 
@@ -99,8 +100,6 @@
 
             <!-- APP-MW-5 (#15): Workspace control buttons -->
             <VBox styleClass="workspace-controls" spacing="10" alignment="BOTTOM_CENTER">
-                <Button fx:id="switchExpertBtn" text="Switch Expert" styleClass="btn-primary"
-                        maxWidth="Infinity" onAction="#onSwitchExpert"/>
                 <Button fx:id="clearContextBtn" text="Clear Context" styleClass="btn-secondary"
                         maxWidth="Infinity" onAction="#onClearContext"/>
                 <Button fx:id="endSessionBtn" text="End Session" styleClass="btn-primary"

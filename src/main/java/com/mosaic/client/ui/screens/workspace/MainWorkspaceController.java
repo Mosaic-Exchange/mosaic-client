@@ -54,7 +54,6 @@ public class MainWorkspaceController {
     @FXML private Label metaExpertStatus;
 
     // ── APP-MW-5 (#15) fields ────────────────────────────────
-    @FXML private Button switchExpertBtn;
     @FXML private Button clearContextBtn;
     @FXML private Button endSessionBtn;
 
@@ -113,6 +112,11 @@ public class MainWorkspaceController {
     @FXML
     private void onSwitchExpert() {
         Navigator.showExpertSelection();
+    }
+
+    @FXML
+    private void onOpenSettings() {
+        Navigator.showSettings();
     }
 
     @FXML
