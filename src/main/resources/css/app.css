@@ -112,16 +112,16 @@
 
 /* Remove the default white background inside the list */
 .workspace-sidebar .list-view .viewport {
-    -fx-background-color: #181825;
+    -fx-background-color: transparent;
 }
 
 /* Alternate session list colors */
 .workspace-sidebar .list-cell:odd {
-    -fx-background-color: #FFFCF7; 
+    -fx-background-color: #FFFCF7;
 }
 
 .workspace-sidebar .list-cell:even {
-    -fx-background-color: #d5e6cf;  
+    -fx-background-color: #d5e6cf;
 }
 
 .workspace-sidebar .list-cell {

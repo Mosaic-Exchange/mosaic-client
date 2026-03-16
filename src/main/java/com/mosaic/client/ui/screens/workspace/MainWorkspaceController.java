@@ -36,6 +36,7 @@ public class MainWorkspaceController {
     @FXML
     private ListView<String> sessionListView;
 
+
     // ── APP-MW-3 (#13) fields ────────────────────────────────
     @FXML private ScrollPane chatScrollPane;
     @FXML private VBox       chatHistory;
@@ -105,7 +106,7 @@ public class MainWorkspaceController {
         row.getChildren().add(bubble);
         chatHistory.getChildren().add(row);
     }
-    
+
     private void loadChat(String sessionName) {
         chatHistory.getChildren().clear();
         if (sessionName.equals("Greek Recipes")) {
@@ -119,7 +120,6 @@ public class MainWorkspaceController {
         }
     }
 
-    
     private void addUserMessage(String text) {
         HBox row = new HBox();
         row.setAlignment(Pos.CENTER_RIGHT);
@@ -133,7 +133,7 @@ public class MainWorkspaceController {
 
         row.getChildren().add(bubble);
         chatHistory.getChildren().add(row);
-    }   
+    }
 
     private void addExpertMessage(String text) {
         HBox row = new HBox();
