@@ -129,9 +129,9 @@ public class ExpertSelectionController {
         detailAdapter.setText(expert.adapterFile());
         detailStatus.setText(expert.status());
 
-        // Style the status label
+        // Style the status label: keep base 'label-body', only toggle status classes
         detailStatus.getStyleClass().removeAll(
-                "expert-status-connected", "expert-status-disconnected", "label-body");
+                "expert-status-connected", "expert-status-disconnected");
         if ("Connected".equals(expert.status())) {
             detailStatus.getStyleClass().add("expert-status-connected");
         } else {
