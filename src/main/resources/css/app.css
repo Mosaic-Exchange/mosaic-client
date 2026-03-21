@@ -332,3 +332,56 @@
     -fx-font-size: 12px;
     -fx-font-weight: bold;
 }
+
+/* ── Expert Selection screen (APP-4, #8) ────────────────── */
+
+.expert-selection-screen {
+    -fx-background-color: #A1B5D8;
+}
+
+/* Left filter panel */
+.expert-filters-panel {
+    -fx-background-color: #A1B5D8;
+    -fx-border-color: #8BA3C4;
+    -fx-border-width: 0 1 0 0;
+}
+
+.expert-filters-panel .combo-box {
+    -fx-background-color: #FFFCF7;
+    -fx-border-color: #8BA3C4;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+/* Center expert list panel */
+.expert-list-panel {
+    -fx-background-color: #A1B5D8;
+}
+
+.expert-list-panel .list-view {
+    -fx-background-color: #A1B5D8;
+    -fx-border-color: #8BA3C4;
+}
+
+.expert-list-panel .list-view .viewport {
+    -fx-background-color: transparent;
+}
+
+.expert-list-panel .list-cell {
+    -fx-background-color: #FFFCF7;
+    -fx-text-fill: #1A2C4C;
+    -fx-padding: 10 12;
+}
+
+.expert-list-panel .list-cell:odd {
+    -fx-background-color: #f0f4fa;
+}
+
+.expert-list-panel .list-cell:hover {
+    -fx-background-color: #E4F0D0;
+}
+
+.expert-list-panel .list-cell:selected {
+    -fx-background-color: #A3C497;
+    -fx-text-fill: #FFFCF7;
+}

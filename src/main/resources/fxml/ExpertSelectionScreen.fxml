@@ -1,25 +1,97 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.layout.BorderPane?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
 
 <!--
-    Expert Selection screen — structural placeholder.
-
-    TODO APP-4 (#8) — Full implementation
-        AC1: Left filters panel with domain / source / availability dropdowns (no backend logic)
+    Expert Selection screen — APP-4 (#8)
+        AC1: Left filters panel with domain / source / availability dropdowns
         AC2: Centre list renders hardcoded expert entries
         AC3: Clicking an expert updates the right preview/detail panel
-        AC4: "Confirm" button → Navigator.showWorkspace()  (show selected expert as placeholder text)
-        AC5: "Download" button → show a placeholder Alert or toast
+        AC4: "Confirm" button → Navigator.showWorkspace()
+        AC5: "Download" button → placeholder Alert
 -->
 <BorderPane xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.mosaic.client.ui.screens.expert.ExpertSelectionController"
             styleClass="expert-selection-screen">
 
+    <!-- TOP — header bar -->
+    <top>
+        <HBox styleClass="workspace-header" alignment="CENTER_LEFT" minHeight="52" spacing="12">
+            <padding><Insets top="12" right="16" bottom="12" left="16"/></padding>
+            <Label text="Select an Expert" styleClass="label-title"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="Back" styleClass="btn-secondary" onAction="#onBack"/>
+        </HBox>
+    </top>
+
+    <!-- LEFT — AC1: Filters panel -->
+    <left>
+        <VBox styleClass="expert-filters-panel" prefWidth="200" spacing="14" alignment="TOP_LEFT">
+            <padding><Insets top="16" right="12" bottom="16" left="12"/></padding>
+            <Label text="Filters" styleClass="label-title"/>
+            <Separator/>
+
+            <Label text="Domain" styleClass="label-muted"/>
+            <ComboBox fx:id="domainFilter" maxWidth="Infinity" promptText="All Domains"/>
+
+            <Label text="Source" styleClass="label-muted"/>
+            <ComboBox fx:id="sourceFilter" maxWidth="Infinity" promptText="All Sources"/>
+
+            <Label text="Availability" styleClass="label-muted"/>
+            <ComboBox fx:id="availabilityFilter" maxWidth="Infinity" promptText="All"/>
+        </VBox>
+    </left>
+
+    <!-- CENTER — AC2: Expert list -->
     <center>
-        <Label text="Expert Selection — coming in #8"
-               styleClass="screen-placeholder-label"/>
+        <VBox styleClass="expert-list-panel" spacing="8">
+            <padding><Insets top="16" right="12" bottom="16" left="12"/></padding>
+            <Label text="Available Experts" styleClass="label-title"/>
+            <ListView fx:id="expertListView" VBox.vgrow="ALWAYS"/>
+        </VBox>
     </center>
+
+    <!-- RIGHT — AC3/AC4/AC5: Detail preview + action buttons -->
+    <right>
+        <VBox styleClass="expert-panel" prefWidth="220" alignment="TOP_CENTER">
+            <padding><Insets top="16" right="12" bottom="16" left="12"/></padding>
+
+            <!-- AC3: Expert detail card -->
+            <VBox fx:id="detailCard" styleClass="card" spacing="8">
+                <Label text="Expert Details" styleClass="label-title"/>
+                <Separator/>
+                <Label text="Name" styleClass="label-muted"/>
+                <Label fx:id="detailName" text="—" styleClass="label-body"/>
+                <Label text="Domain" styleClass="label-muted"/>
+                <Label fx:id="detailDomain" text="—" styleClass="label-body"/>
+                <Label text="Source" styleClass="label-muted"/>
+                <Label fx:id="detailSource" text="—" styleClass="label-body"/>
+                <Label text="Adapter" styleClass="label-muted"/>
+                <Label fx:id="detailAdapter" text="—" styleClass="label-body" wrapText="true"/>
+                <Label text="Status" styleClass="label-muted"/>
+                <Label fx:id="detailStatus" text="—" styleClass="label-body"/>
+            </VBox>
+
+            <!-- Spacer -->
+            <Region VBox.vgrow="ALWAYS"/>
+
+            <!-- AC4 + AC5: Action buttons -->
+            <VBox spacing="10" alignment="BOTTOM_CENTER">
+                <Button fx:id="confirmBtn" text="Confirm" styleClass="btn-cta"
+                        maxWidth="Infinity" onAction="#onConfirm" disable="true"/>
+                <Button fx:id="downloadBtn" text="Download" styleClass="btn-secondary"
+                        maxWidth="Infinity" onAction="#onDownload" disable="true"/>
+            </VBox>
+        </VBox>
+    </right>
 
 </BorderPane>

@@ -82,10 +82,14 @@ public class MainWorkspaceController {
         chatHistory.heightProperty().addListener(
                 (obs, oldHeight, newHeight) -> chatScrollPane.setVvalue(1.0));
 
-        // APP-MW-4 (#14): Populate with hardcoded expert data.
-        // Will be replaced with real adapter data when AI integration lands.
-        loadActiveExpert("Gardening Expert", "Gardening", "Local",
-                         "gardening_expert.gguf", "Connected");
+        // APP-MW-4 (#14): Load expert from current selections, or fall back to default Gardening Expert.
+        String[] expert = Navigator.getActiveExpert();
+        if (expert != null) {
+            loadActiveExpert(expert[0], expert[1], expert[2], expert[3], expert[4]);
+        } else {
+            loadActiveExpert("Gardening Expert", "Gardening", "Local",
+                             "gardening_expert.gguf", "Connected");
+        }
     }
 
     // ── APP-MW-4 (#14): Expert metadata helpers ──────────────
