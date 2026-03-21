@@ -91,6 +91,55 @@
     -fx-border-color: #8BA3C4;
     -fx-border-width: 0 1 0 0;
 }
+/* Sidebar buttons */
+.workspace-sidebar .button {
+    -fx-background-color: #FFFCF7;
+    -fx-text-fill: #1A2C4C;
+    -fx-background-radius: 6;
+    -fx-padding: 8 12;
+    -fx-pref-width: 160px;
+}
+
+.workspace-sidebar .button:hover {
+    -fx-background-color: #E4F0D0;
+}
+
+/* Session list container */
+.workspace-sidebar .list-view {
+    -fx-background-color: #A1B5D8;
+    -fx-border-color: #8BA3C4;
+}
+
+/* Remove the default white background inside the list */
+.workspace-sidebar .list-view .viewport {
+    -fx-background-color: transparent;
+}
+
+/* Alternate session list colors */
+.workspace-sidebar .list-cell:odd {
+    -fx-background-color: #FFFCF7;
+}
+
+.workspace-sidebar .list-cell:even {
+    -fx-background-color: #d5e6cf;
+}
+
+.workspace-sidebar .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #1A2C4C;
+    -fx-padding: 6 10;
+}
+
+/* Hover effect */
+.workspace-sidebar .list-cell:hover {
+    -fx-background-color: #6b8861;
+}
+
+/* Selected session */
+.workspace-sidebar .list-cell:selected {
+    -fx-background-color: #A3C497;
+    -fx-text-fill: #FFFCF7;
+}
 
 /* Chat outer container */
 .chat-panel { -fx-background-color: #A1B5D8; }
@@ -266,6 +315,75 @@
     -fx-font-size: 11px;
     -fx-font-weight: bold;
     -fx-padding: 0 0 2 4;
+}
+
+/* ── Expert metadata panel (APP-MW-4, #14) ──────────────── */
+
+/* Status badge — connected (green) */
+.expert-status-connected {
+    -fx-text-fill: #2e7d32;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+/* Status badge — disconnected (muted red) */
+.expert-status-disconnected {
+    -fx-text-fill: #b94040;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+/* ── Expert Selection screen (APP-4, #8) ────────────────── */
+
+.expert-selection-screen {
+    -fx-background-color: #A1B5D8;
+}
+
+/* Left filter panel */
+.expert-filters-panel {
+    -fx-background-color: #A1B5D8;
+    -fx-border-color: #8BA3C4;
+    -fx-border-width: 0 1 0 0;
+}
+
+.expert-filters-panel .combo-box {
+    -fx-background-color: #FFFCF7;
+    -fx-border-color: #8BA3C4;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+/* Center expert list panel */
+.expert-list-panel {
+    -fx-background-color: #A1B5D8;
+}
+
+.expert-list-panel .list-view {
+    -fx-background-color: #A1B5D8;
+    -fx-border-color: #8BA3C4;
+}
+
+.expert-list-panel .list-view .viewport {
+    -fx-background-color: transparent;
+}
+
+.expert-list-panel .list-cell {
+    -fx-background-color: #FFFCF7;
+    -fx-text-fill: #1A2C4C;
+    -fx-padding: 10 12;
+}
+
+.expert-list-panel .list-cell:odd {
+    -fx-background-color: #f0f4fa;
+}
+
+.expert-list-panel .list-cell:hover {
+    -fx-background-color: #E4F0D0;
+}
+
+.expert-list-panel .list-cell:selected {
+    -fx-background-color: #A3C497;
+    -fx-text-fill: #FFFCF7;
 }
 
 /* ── Settings screen (APP-5, #9) ────────────────────────── */

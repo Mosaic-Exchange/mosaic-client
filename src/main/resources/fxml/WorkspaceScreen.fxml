@@ -5,9 +5,14 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.Separator?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.collections.FXCollections?>
+<?import java.lang.String?>
 
 <!--
     Main Workspace screen — layout structure only (APP-MW-1, #11).
@@ -25,21 +30,34 @@
             fx:controller="com.mosaic.client.ui.screens.workspace.MainWorkspaceController"
             styleClass="workspace-screen">
 
-    <!-- TOP — expert status header placeholder -->
+    <!-- TOP — active expert status header (APP-MW-4, #14) -->
     <top>
-        <HBox styleClass="workspace-header" alignment="CENTER_LEFT" minHeight="52">
+        <HBox styleClass="workspace-header" alignment="CENTER_LEFT" minHeight="52" spacing="12">
             <padding><Insets top="12" right="16" bottom="12" left="16"/></padding>
-            <!-- TODO APP-MW-4 (#14): Replace with active expert name, source, mode and Switch Expert button -->
-            <Label text="[Header] Active Expert Status — see #14" styleClass="panel-placeholder-label"/>
+            <Label fx:id="headerExpertName" text="Gardening Expert" styleClass="label-title"/>
+            <Label fx:id="headerExpertSource" text="Local" styleClass="label-muted"/>
+            <Label fx:id="headerExpertMode" text="Inference" styleClass="label-muted"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="Switch Expert" styleClass="btn-primary" onAction="#onSwitchExpert"/>
+            <Button text="Settings" styleClass="btn-primary" onAction="#onOpenSettings"/>
         </HBox>
     </top>
 
     <!-- LEFT — session list sidebar placeholder -->
     <left>
-        <VBox styleClass="workspace-sidebar" prefWidth="220" alignment="TOP_CENTER">
+        <VBox styleClass="workspace-sidebar" prefWidth="220" alignment="TOP_CENTER" spacing="10">
             <padding><Insets top="16" right="12" bottom="16" left="12"/></padding>
             <!-- TODO APP-MW-2 (#12): Replace with New Session button, Search Session button, session list -->
-            <Label text="[Sidebar] Session List — see #12" styleClass="panel-placeholder-label" wrapText="true"/>
+            <Button text="New Session"/>
+            <Button text="Search Session"/>
+            <ListView fx:id="sessionListView">
+                <items>
+                    <FXCollections fx:factory="observableArrayList">
+                        <String fx:value="Greek Recipes"/>
+                        <String fx:value="How to Make Tomatoes Grow"/>
+                    </FXCollections>
+                </items>
+            </ListView>
         </VBox>
     </left>
 
@@ -69,13 +87,36 @@
         </BorderPane>
     </center>
 
-    <!-- RIGHT — expert details panel placeholder -->
+    <!-- RIGHT — expert details panel + workspace controls -->
     <right>
         <VBox styleClass="expert-panel" prefWidth="200" alignment="TOP_CENTER">
             <padding><Insets top="16" right="12" bottom="16" left="12"/></padding>
-            <!-- TODO APP-MW-4 (#14): Replace with expert metadata labels -->
-            <!-- TODO APP-MW-5 (#15): Add End Session and Clear Context buttons at bottom -->
-            <Label text="[Right] Expert Details — see #14" styleClass="panel-placeholder-label" wrapText="true"/>
+            <!-- APP-MW-4 (#14): Expert metadata card -->
+            <VBox styleClass="card" spacing="8">
+                <Label text="Expert Details" styleClass="label-title"/>
+                <Separator/>
+                <Label text="Name" styleClass="label-muted"/>
+                <Label fx:id="metaExpertName" text="Gardening Expert" styleClass="label-body"/>
+                <Label text="Domain" styleClass="label-muted"/>
+                <Label fx:id="metaExpertDomain" text="Gardening" styleClass="label-body"/>
+                <Label text="Source" styleClass="label-muted"/>
+                <Label fx:id="metaExpertSource" text="Local" styleClass="label-body"/>
+                <Label text="Adapter" styleClass="label-muted"/>
+                <Label fx:id="metaAdapterFile" text="gardening_expert.gguf" styleClass="label-body" wrapText="true"/>
+                <Label text="Status" styleClass="label-muted"/>
+                <Label fx:id="metaExpertStatus" text="Connected" styleClass="expert-status-connected"/>
+            </VBox>
+
+            <!-- Spacer pushes controls to the bottom -->
+            <Region VBox.vgrow="ALWAYS"/>
+
+            <!-- APP-MW-5 (#15): Workspace control buttons -->
+            <VBox styleClass="workspace-controls" spacing="10" alignment="BOTTOM_CENTER">
+                <Button fx:id="clearContextBtn" text="Clear Context" styleClass="btn-secondary"
+                        maxWidth="Infinity" onAction="#onClearContext"/>
+                <Button fx:id="endSessionBtn" text="End Session" styleClass="btn-primary"
+                        maxWidth="Infinity" onAction="#onEndSession"/>
+            </VBox>
         </VBox>
     </right>
 
