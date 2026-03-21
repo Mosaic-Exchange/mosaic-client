@@ -40,6 +40,6 @@ public class Navigator {
 
     /** Returns the active expert array, or null if none has been selected yet. */
     public static String[] getActiveExpert() {
-        return activeExpert;
+        return activeExpert == null ? null : activeExpert.clone();
     }
 }
