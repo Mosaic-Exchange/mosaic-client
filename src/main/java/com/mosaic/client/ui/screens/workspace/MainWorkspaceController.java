@@ -1,21 +1,20 @@
 package com.mosaic.client.ui.screens.workspace;
 
+import com.mosaic.client.Navigator;
+
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.scene.control.ListView;
-import javafx.geometry.Insets;
-
-import com.mosaic.client.Navigator;
 
 /**
  * Controller for the Main Workspace screen.
@@ -81,6 +80,11 @@ public class MainWorkspaceController {
         // Height listener fires after layout is measured — more reliable than Platform.runLater.
         chatHistory.heightProperty().addListener(
                 (obs, oldHeight, newHeight) -> chatScrollPane.setVvalue(1.0));
+
+        sessionListView.getSelectionModel().selectedItemProperty().addListener(
+          (obs, oldVal, newVal) -> { if (newVal != null)
+        loadChat(newVal); }
+        );
 
         // APP-MW-4 (#14): Load expert from current selections, or fall back to default Gardening Expert.
         String[] expert = Navigator.getActiveExpert();
