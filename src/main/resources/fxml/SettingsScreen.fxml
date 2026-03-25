@@ -1,7 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleButton?>
 
 <!--
     Settings screen — structural placeholder.
@@ -22,8 +32,85 @@
             styleClass="settings-screen">
 
     <center>
-        <Label text="Settings — coming in #9"
-               styleClass="screen-placeholder-label"/>
+        <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;">
+            <VBox spacing="24" style="-fx-padding: 32 40 32 40;">
+
+                <!-- Page title -->
+                <Label text="Settings" style="-fx-font-size: 22px; -fx-font-weight: bold;"/>
+
+                <!-- ── Section 1: Privacy & Sharing ── -->
+                <VBox spacing="12" styleClass="settings-section">
+                    <Label text="Privacy &amp; Sharing" styleClass="section-title"/>
+                    <Separator/>
+
+                    <HBox alignment="CENTER_LEFT" spacing="16">
+                        <ToggleButton fx:id="shareAnonymousDataToggle" mnemonicParsing="false" text="Off"/>
+                        <VBox spacing="2">
+                            <Label text="Share anonymous usage data"/>
+                            <Label text="Helps improve the app. No personal data is collected."
+                                   styleClass="hint-label"/>
+                        </VBox>
+                    </HBox>
+
+                    <HBox alignment="CENTER_LEFT" spacing="16">
+                        <ToggleButton fx:id="localOnlyModeToggle" mnemonicParsing="false" text="Off"/>
+                        <VBox spacing="2">
+                            <Label text="Local-only mode"/>
+                            <Label text="Disables all outbound network connections."
+                                   styleClass="hint-label"/>
+                        </VBox>
+                    </HBox>
+                </VBox>
+
+                <!-- ── Section 2: Network Configuration ── -->
+                <VBox spacing="12" styleClass="settings-section">
+                    <Label text="Network Configuration" styleClass="section-title"/>
+                    <Separator/>
+
+                    <HBox alignment="CENTER_LEFT" spacing="12">
+                        <Label text="Network mode" minWidth="140"/>
+                        <ComboBox fx:id="networkModeCombo" prefWidth="200"/>
+                    </HBox>
+
+                    <VBox spacing="4">
+                        <Label text="Bootstrap nodes"/>
+                        <Label text="One address per line (host:port). Leave empty to use defaults."
+                               styleClass="hint-label"/>
+                        <TextArea fx:id="bootstrapNodesArea"
+                                  prefRowCount="4"
+                                  wrapText="true"/>
+                    </VBox>
+                </VBox>
+
+                <!-- ── Section 3: Adapter Management ── -->
+                <VBox spacing="12" styleClass="settings-section">
+                    <Label text="Adapter Management" styleClass="section-title"/>
+                    <Separator/>
+
+                    <Label text="Enabled adapters"/>
+                    <CheckBox fx:id="bluetoothAdapterCheck" text="Bluetooth"/>
+                    <CheckBox fx:id="wifiAdapterCheck"      text="Wi-Fi"/>
+                    <CheckBox fx:id="ethernetAdapterCheck"  text="Ethernet"/>
+
+                    <Separator/>
+
+                    <Label text="Custom adapter"/>
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <TextField fx:id="customAdapterField" prefWidth="260"/>
+                        <Button text="Add"    onAction="#onAddAdapter"    mnemonicParsing="false"/>
+                        <Button text="Remove" onAction="#onRemoveAdapter" mnemonicParsing="false"/>
+                    </HBox>
+                </VBox>
+
+                <!-- ── Save / Cancel ── -->
+                <HBox spacing="12" alignment="CENTER_RIGHT">
+                    <Button text="Cancel" onAction="#onCancel" mnemonicParsing="false"/>
+                    <Button text="Save"   onAction="#onSave"   mnemonicParsing="false"
+                            defaultButton="true"/>
+                </HBox>
+
+            </VBox>
+        </ScrollPane>
     </center>
 
 </BorderPane>
