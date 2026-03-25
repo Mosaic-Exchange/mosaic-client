@@ -1,5 +1,6 @@
 package com.mosaic.client.ui.screens.workspace;
 
+import com.mosaic.client.AIServer;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
@@ -13,9 +14,12 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.control.ListView;
-import javafx.geometry.Insets;
 
 import com.mosaic.client.Navigator;
+
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.util.Optional;
 
 /**
  * Controller for the Main Workspace screen.
@@ -36,6 +40,9 @@ import com.mosaic.client.Navigator;
  *                    wire End Session (confirmation dialog, then clear).        — DONE
  */
 public class MainWorkspaceController {
+
+    // AI server
+    AIServer aiServer;
 
     // ── MW-2 fields ──────────────────────────────────────────
     @FXML
@@ -63,7 +70,7 @@ public class MainWorkspaceController {
     @FXML private Button clearContextBtn;
 
     @FXML
-    public void initialize() {
+    public void initialize() throws URISyntaxException {
         // AC3: Enter sends; Shift+Enter inserts a newline.
         // Both cases consume the event so JavaFX does not also insert a newline on send.
         messageInput.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
@@ -72,7 +79,14 @@ public class MainWorkspaceController {
                 if (event.isShiftDown()) {
                     messageInput.insertText(messageInput.getCaretPosition(), "\n");
                 } else {
-                    onSend();
+                    // TODO: Exception handling
+                    try {
+                        onSend();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    } catch (InterruptedException | URISyntaxException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
             }
         });
@@ -90,6 +104,8 @@ public class MainWorkspaceController {
             loadActiveExpert("Gardening Expert", "Gardening", "Local",
                              "gardening_expert.gguf", "Connected");
         }
+
+        aiServer = new AIServer(Optional.empty(), Optional.empty());
     }
 
     // ── APP-MW-4 (#14): Expert metadata helpers ──────────────
@@ -108,12 +124,20 @@ public class MainWorkspaceController {
 
     // ── AC3: Send button handler ─────────────────────────────
     @FXML
-    private void onSend() {
+    private void onSend() throws IOException, InterruptedException, URISyntaxException {
         String text = messageInput.getText().trim();
         if (text.isEmpty()) return;
 
         appendUserMessage(text); // AC3: append to chat window
         messageInput.clear();    // AC3: clear the input field
+
+        if (!aiServer.running()) {
+            System.out.println("Start AI server...");
+            aiServer.startServer("127.0.0.1", 80);
+        }
+        String response = aiServer.generateResponse(text, 32, "testAdapter".describeConstable());
+
+        appendExpertMessage(response);
     }
 
     // ── APP-MW-5 (#15): Workspace control handlers ───────────
@@ -165,35 +189,7 @@ public class MainWorkspaceController {
         chatHistory.getChildren().add(row);
     }
 
-    private void loadChat(String sessionName) {
-        chatHistory.getChildren().clear();
-        if (sessionName.equals("Greek Recipes")) {
-            addUserMessage("How do I make tzaziki?");
-            addExpertMessage("You have to mix yogurt, grated cucumber a lot of dill, olive oil and garlic.");
-        } else if (sessionName.equals("How to Make Tomatoes Grow")) {
-            addUserMessage("How do I make sure my tomatoes are growing?");
-            addExpertMessage("Tomatoes grow best in full sunlight.");
-            addUserMessage("How often should I water them?");
-            addExpertMessage("Water deeply bout 2-3 times per week.");
-        }
-    }
-
-    private void addUserMessage(String text) {
-        HBox row = new HBox();
-        row.setAlignment(Pos.CENTER_RIGHT);
-
-        VBox bubble = new VBox();
-        bubble.getStyleClass().add("message-bubble-user");
-
-        Label label = new Label(text);
-        label.setWrapText(true);
-        bubble.getChildren().add(label);
-
-        row.getChildren().add(bubble);
-        chatHistory.getChildren().add(row);
-    }
-
-    private void addExpertMessage(String text) {
+    private void appendExpertMessage(String text) {
         HBox row = new HBox();
         row.setAlignment(Pos.CENTER_LEFT);
 
@@ -206,5 +202,18 @@ public class MainWorkspaceController {
 
         row.getChildren().add(bubble);
         chatHistory.getChildren().add(row);
+    }
+
+    private void loadChat(String sessionName) {
+        chatHistory.getChildren().clear();
+        if (sessionName.equals("Greek Recipes")) {
+            appendUserMessage("How do I make tzaziki?");
+            appendExpertMessage("You have to mix yogurt, grated cucumber a lot of dill, olive oil and garlic.");
+        } else if (sessionName.equals("How to Make Tomatoes Grow")) {
+            appendUserMessage("How do I make sure my tomatoes are growing?");
+            appendExpertMessage("Tomatoes grow best in full sunlight.");
+            appendUserMessage("How often should I water them?");
+            appendExpertMessage("Water deeply bout 2-3 times per week.");
+        }
     }
 }
