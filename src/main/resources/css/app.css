@@ -1,49 +1,56 @@
-/* app.css — shared stylesheet for Mosaic client
-   Applied to every screen via MosaicApp.start().
+/* app.css — Mosaic client shared stylesheet
+   Applied to every screen via MosaicApp.start() — AC1 satisfied.
 
-   TODO APP-6 (#10) — Full styling pass
-     AC1: Ensure this file is applied to every screen (already done via Scene)
-     AC2: Add consistent spacing/font rules for buttons, labels, panels
-     AC3: Add .message-bubble-user and .message-bubble-expert styles for chat
+   Brand colour palette (APP-6, #10):
+     #1A2C4C  Space Indigo  — primary text, dark button fills
+     #A1B5D8  Powder Blue   — app background, sidebar, panel backgrounds
+     #FFFCF7  Porcelain     — card surfaces, chat area, input, session items
+     #E4F0D0  Frosted Mint  — send button, hover accent
+     #A3C497  Muted Olive   — active/selected states, CTA accents
 
-   TODO APP-2 (#6): Expand nav bar / header styles once nav bar is added
-   TODO APP-5 (#9): Add settings-driven theme toggling (light/dark)
+   Colour role mapping (matches wireframe):
+     Background       → Powder Blue  #A1B5D8
+     Card surfaces    → Porcelain    #FFFCF7
+     Text (primary)   → Space Indigo #1A2C4C
+     Text (secondary) → #3D5478
+     Borders          → #8BA3C4
+     Dark buttons     → Space Indigo #1A2C4C  with Porcelain text
+     Send / CTA       → Frosted Mint #E4F0D0  with Space Indigo text
+
+   TODO APP-2 (#6): Add nav bar styles once nav bar FXML is added.
+   TODO APP-5 (#9): Add settings-driven theme toggling.
 */
 
+/* ── Root ────────────────────────────────────────────────── */
 .root {
     -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     -fx-font-size: 14px;
-    -fx-background-color: #1e1e2e;
+    -fx-background-color: #A1B5D8;
 }
 
-.main-layout {
-    -fx-background-color: #1e1e2e;
-}
+.main-layout  { -fx-background-color: #A1B5D8; }
+.content-area { -fx-background-color: #A1B5D8; }
 
-.content-area {
-    -fx-background-color: #1e1e2e;
-}
-
-/* Splash screen */
+/* ── Splash screen ──────────────────────────────────────── */
 .splash-screen {
-    -fx-background-color: #1e1e2e;
+    -fx-background-color: #A1B5D8;
     -fx-padding: 60;
 }
 
 .splash-title {
-    -fx-text-fill: #cdd6f4;
+    -fx-text-fill: #1A2C4C;
     -fx-font-size: 48px;
     -fx-font-weight: bold;
 }
 
 .splash-subtitle {
-    -fx-text-fill: #a6adc8;
+    -fx-text-fill: #3D5478;
     -fx-font-size: 16px;
 }
 
 .splash-button {
-    -fx-background-color: #89b4fa;
-    -fx-text-fill: #1e1e2e;
+    -fx-background-color: #1A2C4C;
+    -fx-text-fill: #FFFCF7;
     -fx-font-size: 14px;
     -fx-font-weight: bold;
     -fx-padding: 10 28;
@@ -52,51 +59,355 @@
 }
 
 .splash-button:hover {
-    -fx-background-color: #b4d0fe;
+    -fx-background-color: #2E4268;
 }
 
-/* Placeholder label shown in screens not yet implemented
-   TODO APP-6 (#10): Remove once real screen content is built */
+/* ── Placeholder labels ─────────────────────────────────── */
 .screen-placeholder-label {
-    -fx-text-fill: #6c7086;
+    -fx-text-fill: #8BA3C4;
     -fx-font-size: 18px;
     -fx-font-style: italic;
 }
 
-/* ── Workspace layout panels (APP-MW-1, #11) ──────────────────
-   Structural colours only — full styling pass in APP-6 (#10).
-   ─────────────────────────────────────────────────────────── */
-.workspace-screen   { -fx-background-color: #1e1e2e; }
+.panel-placeholder-label {
+    -fx-text-fill: #8BA3C4;
+    -fx-font-size: 13px;
+    -fx-font-style: italic;
+}
 
+/* ── Workspace layout panels (APP-MW-1, #11) ────────────── */
+.workspace-screen { -fx-background-color: #A1B5D8; }
+
+/* Header — Porcelain surface with a subtle bottom border */
 .workspace-header {
-    -fx-background-color: #181825;
-    -fx-border-color: #313244;
+    -fx-background-color: #FFFCF7;
+    -fx-border-color: #8BA3C4;
     -fx-border-width: 0 0 1 0;
 }
 
+/* Sidebar — blends with app background, right border only */
 .workspace-sidebar {
-    -fx-background-color: #181825;
-    -fx-border-color: #313244;
+    -fx-background-color: #A1B5D8;
+    -fx-border-color: #8BA3C4;
     -fx-border-width: 0 1 0 0;
 }
+/* Sidebar buttons */
+.workspace-sidebar .button {
+    -fx-background-color: #FFFCF7;
+    -fx-text-fill: #1A2C4C;
+    -fx-background-radius: 6;
+    -fx-padding: 8 12;
+    -fx-pref-width: 160px;
+}
 
-.chat-panel     { -fx-background-color: #1e1e2e; }
+.workspace-sidebar .button:hover {
+    -fx-background-color: #E4F0D0;
+}
 
+/* Session list container */
+.workspace-sidebar .list-view {
+    -fx-background-color: #A1B5D8;
+    -fx-border-color: #8BA3C4;
+}
+
+/* Remove the default white background inside the list */
+.workspace-sidebar .list-view .viewport {
+    -fx-background-color: transparent;
+}
+
+/* Alternate session list colors */
+.workspace-sidebar .list-cell:odd {
+    -fx-background-color: #FFFCF7;
+}
+
+.workspace-sidebar .list-cell:even {
+    -fx-background-color: #d5e6cf;
+}
+
+.workspace-sidebar .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #1A2C4C;
+    -fx-padding: 6 10;
+}
+
+/* Hover effect */
+.workspace-sidebar .list-cell:hover {
+    -fx-background-color: #6b8861;
+}
+
+/* Selected session */
+.workspace-sidebar .list-cell:selected {
+    -fx-background-color: #A3C497;
+    -fx-text-fill: #FFFCF7;
+}
+
+/* Chat outer container */
+.chat-panel { -fx-background-color: #A1B5D8; }
+
+/* Message input bar — Porcelain surface with top border */
 .input-area {
-    -fx-background-color: #181825;
-    -fx-border-color: #313244;
+    -fx-background-color: #FFFCF7;
+    -fx-border-color: #8BA3C4;
     -fx-border-width: 1 0 0 0;
 }
 
+/* Right expert panel — blends with background, left border */
 .expert-panel {
-    -fx-background-color: #181825;
-    -fx-border-color: #313244;
+    -fx-background-color: #A1B5D8;
+    -fx-border-color: #8BA3C4;
     -fx-border-width: 0 0 0 1;
 }
 
-/* Inline placeholder labels used inside workspace panels */
-.panel-placeholder-label {
-    -fx-text-fill: #45475a;
+/* Chat scroll + history (APP-MW-3, #13) */
+.chat-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.chat-history {
+    -fx-background-color: transparent;
+}
+
+/* Message input field */
+.message-input {
+    -fx-background-color: #FFFCF7;
+    -fx-text-fill: #1A2C4C;
+    -fx-prompt-text-fill: #8BA3C4;
+    -fx-background-radius: 6;
+    -fx-border-color: #8BA3C4;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+}
+
+/* ── Consistent components — AC2 ────────────────────────────
+   Use these classes on any screen for uniform spacing + font.
+   ─────────────────────────────────────────────────────────── */
+
+/* Primary button — dark fill (Switch Expert, End Session, Confirm) */
+.btn-primary {
+    -fx-background-color: #1A2C4C;
+    -fx-text-fill: #FFFCF7;
+    -fx-font-weight: bold;
     -fx-font-size: 13px;
-    -fx-font-style: italic;
+    -fx-padding: 8 20;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+.btn-primary:hover { -fx-background-color: #2E4268; }
+
+/* Secondary button — outlined, for lower-priority actions */
+.btn-secondary {
+    -fx-background-color: transparent;
+    -fx-text-fill: #1A2C4C;
+    -fx-font-size: 13px;
+    -fx-padding: 8 20;
+    -fx-border-color: #1A2C4C;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+.btn-secondary:hover {
+    -fx-background-color: #D0DCEE;
+}
+
+/* Danger button — for destructive actions */
+.btn-danger {
+    -fx-background-color: transparent;
+    -fx-text-fill: #b94040;
+    -fx-font-size: 13px;
+    -fx-padding: 8 20;
+    -fx-border-color: #b94040;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+.btn-danger:hover { -fx-background-color: #f5dada; }
+
+/* CTA button — Send, positive confirmation (Frosted Mint) */
+.btn-cta {
+    -fx-background-color: #E4F0D0;
+    -fx-text-fill: #1A2C4C;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-padding: 8 20;
+    -fx-min-width: 90;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+.btn-cta:hover { -fx-background-color: #A3C497; }
+
+/* Label hierarchy */
+.label-title {
+    -fx-text-fill: #1A2C4C;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+
+.label-body {
+    -fx-text-fill: #1A2C4C;
+    -fx-font-size: 13px;
+}
+
+.label-muted {
+    -fx-text-fill: #3D5478;
+    -fx-font-size: 12px;
+}
+
+/* Card panel — Porcelain surface with subtle border */
+.card {
+    -fx-background-color: #FFFCF7;
+    -fx-border-color: #8BA3C4;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 12;
+}
+
+/* ── Chat message bubbles — AC3 ─────────────────────────────
+   Used by APP-MW-2 (#12) when rendering chat history.
+
+   Usage:
+     User message row   — HBox alignment=CENTER_RIGHT
+       └─ VBox.styleClass="message-bubble-user"
+             └─ Label (message text)
+
+     Expert message row — HBox alignment=CENTER_LEFT
+       ├─ Label.styleClass="message-sender-label"  ("Mosaic")
+       └─ VBox.styleClass="message-bubble-expert"
+             └─ Label (message text)
+   ─────────────────────────────────────────────────────────── */
+
+/* User bubble — Porcelain card, right side */
+.message-bubble-user {
+    -fx-background-color: #FFFCF7;
+    -fx-background-radius: 12 12 2 12;
+    -fx-border-color: #8BA3C4;
+    -fx-border-width: 1;
+    -fx-border-radius: 12 12 2 12;
+    -fx-padding: 10 14;
+    -fx-max-width: 480;
+}
+.message-bubble-user > .label {
+    -fx-text-fill: #1A2C4C;
+    -fx-font-size: 13px;
+    -fx-wrap-text: true;
+}
+
+/* Expert bubble — Porcelain card, left side */
+.message-bubble-expert {
+    -fx-background-color: #FFFCF7;
+    -fx-background-radius: 12 12 12 2;
+    -fx-border-color: #8BA3C4;
+    -fx-border-width: 1;
+    -fx-border-radius: 12 12 12 2;
+    -fx-padding: 10 14;
+    -fx-max-width: 620;
+}
+.message-bubble-expert > .label {
+    -fx-text-fill: #1A2C4C;
+    -fx-font-size: 13px;
+    -fx-wrap-text: true;
+}
+
+/* Sender name above an expert bubble ("Mosaic" / expert name) */
+.message-sender-label {
+    -fx-text-fill: #3D5478;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 0 0 2 4;
+}
+
+/* ── Expert metadata panel (APP-MW-4, #14) ──────────────── */
+
+/* Status badge — connected (green) */
+.expert-status-connected {
+    -fx-text-fill: #2e7d32;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+/* Status badge — disconnected (muted red) */
+.expert-status-disconnected {
+    -fx-text-fill: #b94040;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+/* ── Expert Selection screen (APP-4, #8) ────────────────── */
+
+.expert-selection-screen {
+    -fx-background-color: #A1B5D8;
+}
+
+/* Left filter panel */
+.expert-filters-panel {
+    -fx-background-color: #A1B5D8;
+    -fx-border-color: #8BA3C4;
+    -fx-border-width: 0 1 0 0;
+}
+
+.expert-filters-panel .combo-box {
+    -fx-background-color: #FFFCF7;
+    -fx-border-color: #8BA3C4;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+/* Center expert list panel */
+.expert-list-panel {
+    -fx-background-color: #A1B5D8;
+}
+
+.expert-list-panel .list-view {
+    -fx-background-color: #A1B5D8;
+    -fx-border-color: #8BA3C4;
+}
+
+.expert-list-panel .list-view .viewport {
+    -fx-background-color: transparent;
+}
+
+.expert-list-panel .list-cell {
+    -fx-background-color: #FFFCF7;
+    -fx-text-fill: #1A2C4C;
+    -fx-padding: 10 12;
+}
+
+.expert-list-panel .list-cell:odd {
+    -fx-background-color: #f0f4fa;
+}
+
+.expert-list-panel .list-cell:hover {
+    -fx-background-color: #E4F0D0;
+}
+
+.expert-list-panel .list-cell:selected {
+    -fx-background-color: #A3C497;
+    -fx-text-fill: #FFFCF7;
+}
+
+/* ── Settings screen (APP-5, #9) ────────────────────────── */
+.settings-screen {
+    -fx-background-color: #A1B5D8;
+}
+
+.settings-section {
+    -fx-background-color: #FFFCF7;
+    -fx-border-color: #8BA3C4;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 20;
+}
+
+.section-title {
+    -fx-text-fill: #1A2C4C;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-padding: 0 0 4 0;
+}
+
+.hint-label {
+    -fx-text-fill: #3D5478;
+    -fx-font-size: 12px;
 }
