@@ -385,3 +385,29 @@
     -fx-background-color: #A3C497;
     -fx-text-fill: #FFFCF7;
 }
+
+/* ── Settings screen (APP-5, #9) ────────────────────────── */
+.settings-screen {
+    -fx-background-color: #A1B5D8;
+}
+
+.settings-section {
+    -fx-background-color: #FFFCF7;
+    -fx-border-color: #8BA3C4;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 20;
+}
+
+.section-title {
+    -fx-text-fill: #1A2C4C;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-padding: 0 0 4 0;
+}
+
+.hint-label {
+    -fx-text-fill: #3D5478;
+    -fx-font-size: 12px;
+}
