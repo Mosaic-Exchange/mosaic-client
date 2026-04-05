@@ -99,7 +99,7 @@ public class AIServer {
         ensureNoConcurrentRequest();
 
         JSONObject requestBody = new JSONObject();
-        requestBody.put("request_id", getRequestId());
+        requestBody.put("request_id", String.valueOf(getRequestId()));
         requestBody.put("message", message);
         requestBody.put("max_tokens", maxTokens);
         adapterId.ifPresent(s -> requestBody.put("adapter_id", s));
@@ -110,6 +110,7 @@ public class AIServer {
                 .method("POST", HttpRequest.BodyPublishers.ofString(requestBody.toString()))
                 .header("Accept-Encoding", "application/json")
                 .header("Content-Type", "application/json")
+                .version(HttpClient.Version.HTTP_1_1)
                 .build();
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());

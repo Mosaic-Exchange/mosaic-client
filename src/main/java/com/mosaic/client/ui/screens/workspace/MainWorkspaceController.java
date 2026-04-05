@@ -138,9 +138,9 @@ public class MainWorkspaceController {
 
         if (!aiServer.running()) {
             System.out.println("Start AI server...");
-            aiServer.startServer("127.0.0.1", 80);
+            aiServer.startServer("127.0.0.1", 4000);
         }
-        String response = aiServer.generateResponse(text, 32, "testAdapter".describeConstable());
+        String response = aiServer.generateResponse(text, 32, Optional.empty());
 
         appendExpertMessage(response);
     }
