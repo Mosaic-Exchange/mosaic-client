@@ -9,6 +9,8 @@ import javafx.stage.Stage;
 public class MosaicApp extends Application {
 
     private final ExchangeServerProcess exchangeServer = new ExchangeServerProcess();
+    private final RumorClient           rumorClient    = new RumorClient();
+    private final ConnectionMonitor     monitor        = new ConnectionMonitor(rumorClient);
 
     /**
      * Called on the launcher thread before the JavaFX stage is shown.
@@ -37,6 +39,16 @@ public class MosaicApp extends Application {
         MainLayoutController controller = loader.getController();
         Navigator.init(controller);
         controller.showSplash();
+
+        monitor
+          .onConnectionStateChanged(state ->
+              System.out.println("[Monitor] connection state -> " + state))
+          .onClusterChanged(nodes ->
+              System.out.println("[Monitor] cluster (" + nodes.size() + "): " + nodes))
+          .onPeerStatusChanged((id, st) ->
+              System.out.println("[Monitor] peer " + id + " -> " + st));
+
+        monitor.start();
     }
 
     /**
@@ -44,6 +56,7 @@ public class MosaicApp extends Application {
      */
     @Override
     public void stop() {
+        monitor.stop();
         exchangeServer.stop();
     }
 
