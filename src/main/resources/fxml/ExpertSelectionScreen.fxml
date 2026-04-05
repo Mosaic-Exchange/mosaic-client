@@ -5,19 +5,22 @@
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.ProgressIndicator?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
 <!--
     Expert Selection screen — APP-4 (#8)
         AC1: Left filters panel with domain / source / availability dropdowns
-        AC2: Centre list renders hardcoded expert entries
+        AC2: ListView populated from live cluster data
         AC3: Clicking an expert updates the right preview/detail panel
         AC4: "Confirm" button → Navigator.showWorkspace()
-        AC5: "Download" button → placeholder Alert
+        AC5: "Download" button → RumorClient.startDownload() with progress bar
 -->
 <BorderPane xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.mosaic.client.ui.screens.expert.ExpertSelectionController"
@@ -51,16 +54,36 @@
         </VBox>
     </left>
 
-    <!-- CENTER — AC2: Expert list -->
+    <!-- CENTER — AC2: Expert list with loading / empty / error states -->
     <center>
         <VBox styleClass="expert-list-panel" spacing="8">
             <padding><Insets top="16" right="12" bottom="16" left="12"/></padding>
             <Label text="Available Experts" styleClass="label-title"/>
-            <ListView fx:id="expertListView" VBox.vgrow="ALWAYS"/>
+
+            <!-- StackPane holds all content states; controller shows exactly one at a time -->
+            <StackPane VBox.vgrow="ALWAYS">
+
+                <!-- LOADING — shown on first load while waiting for the first cluster poll -->
+                <ProgressIndicator fx:id="loadingIndicator" maxWidth="48" maxHeight="48"/>
+
+                <!-- LIST — shown when at least one expert is available -->
+                <ListView fx:id="expertListView" visible="false"/>
+
+                <!-- EMPTY — no InferenceService nodes in cluster -->
+                <Label fx:id="listPlaceholder" text="No experts available"
+                       styleClass="screen-placeholder-label" visible="false"/>
+
+                <!-- ERROR — exchange-server unreachable -->
+                <VBox fx:id="errorSection" spacing="12" alignment="CENTER" visible="false">
+                    <Label text="Could not reach server" styleClass="screen-placeholder-label"/>
+                    <Button text="Retry" styleClass="btn-secondary" onAction="#onRetry"/>
+                </VBox>
+
+            </StackPane>
         </VBox>
     </center>
 
-    <!-- RIGHT — AC3/AC4/AC5: Detail preview + action buttons -->
+    <!-- RIGHT — AC3/AC4/AC5: Detail preview + action buttons + download progress -->
     <right>
         <VBox styleClass="expert-panel" prefWidth="220" alignment="TOP_CENTER">
             <padding><Insets top="16" right="12" bottom="16" left="12"/></padding>
@@ -83,6 +106,13 @@
 
             <!-- Spacer -->
             <Region VBox.vgrow="ALWAYS"/>
+
+            <!-- Download progress (hidden until download starts) -->
+            <VBox fx:id="downloadProgressSection" spacing="6" visible="false">
+                <padding><Insets bottom="8"/></padding>
+                <Label fx:id="downloadStatusLabel" text="" styleClass="label-muted" wrapText="true"/>
+                <ProgressBar fx:id="downloadProgressBar" maxWidth="Infinity" progress="0"/>
+            </VBox>
 
             <!-- AC4 + AC5: Action buttons -->
             <VBox spacing="10" alignment="BOTTOM_CENTER">

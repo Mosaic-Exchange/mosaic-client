@@ -24,7 +24,12 @@ public class RumorClient {
     // Public data types
     // -------------------------------------------------------------------------
 
-    public record NodeInfo(String id, String type, String status, List<String> services, boolean self) {}
+    /**
+     * @param sharedFiles raw {@code SHARED_FILES} gossip value, e.g. {@code "model.gguf:4096000,other.gguf:99"}
+     *                    — empty string when the peer has no advertised files.
+     */
+    public record NodeInfo(String id, String type, String status,
+                           List<String> services, boolean self, String sharedFiles) {}
 
     public record PeerFile(String nodeId, String name, long size) {}
 
@@ -293,16 +298,21 @@ public class RumorClient {
             String services = extractStr(obj, "services");
             boolean self    = extractBool(obj, "self", false);
 
+            // Extract SHARED_FILES from the nested appStates object.
+            String appStates   = extractJsonObject(obj, "appStates");
+            String sharedFiles = appStates != null ? extractStr(appStates, "SHARED_FILES") : "";
+
             List<String> serviceList = (services == null || services.isEmpty())
                 ? Collections.emptyList()
                 : Arrays.asList(services.split(","));
 
             nodes.add(new NodeInfo(
-                id     != null ? id     : "",
-                type   != null ? type   : "?",
-                status != null ? status : "?",
+                id          != null ? id          : "",
+                type        != null ? type        : "?",
+                status      != null ? status      : "?",
                 serviceList,
-                self
+                self,
+                sharedFiles != null ? sharedFiles : ""
             ));
         }
         return nodes;
@@ -344,6 +354,18 @@ public class RumorClient {
     // -------------------------------------------------------------------------
     // Minimal JSON extraction helpers — no external library
     // -------------------------------------------------------------------------
+
+    /**
+     * Finds {@code "field":{...}} and returns the content between the braces.
+     * Handles nested objects/arrays and quoted strings correctly.
+     */
+    private static String extractJsonObject(String json, String field) {
+        String key = "\"" + field + "\":{";
+        int start = json.indexOf(key);
+        if (start < 0) return null;
+        int bracePos = start + key.length() - 1; // position of '{'
+        return extractBalanced(json, bracePos, '{', '}');
+    }
 
     /**
      * Finds {@code "field":[...]} and returns the content between the brackets.

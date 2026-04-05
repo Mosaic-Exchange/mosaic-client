@@ -34,10 +34,11 @@ public class ConnectionMonitor {
     private Consumer<List<RumorClient.NodeInfo>> onClusterChanged;
     private BiConsumer<String, String>   onPeerStatusChanged; // (nodeId, "ALIVE"/"DOWN")
 
-    // Internal state — only touched on the poller thread
-    private State                        currentState    = State.CONNECTING;
-    private Map<String, String>          lastPeerStatus  = new HashMap<>(); // nodeId → status
-    private List<RumorClient.NodeInfo>   lastCluster     = Collections.emptyList();
+    // Internal state — written on the poller thread, read from any thread.
+    // volatile ensures FX-thread reads see the latest value without a lock.
+    private volatile State                      currentState   = State.CONNECTING;
+    private volatile List<RumorClient.NodeInfo> lastCluster    = Collections.emptyList();
+    private          Map<String, String>         lastPeerStatus = new HashMap<>(); // nodeId → status
 
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "connection-monitor");
@@ -78,6 +79,22 @@ public class ConnectionMonitor {
         this.onPeerStatusChanged = cb;
         return this;
     }
+
+    // -------------------------------------------------------------------------
+    // Snapshot accessors (safe to call from any thread)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Returns the connection state as of the last completed poll.
+     * {@link State#CONNECTING} means no poll has finished yet.
+     */
+    public State getCurrentState() { return currentState; }
+
+    /**
+     * Returns a snapshot of the cluster as of the last completed poll.
+     * Empty list when no poll has finished yet.
+     */
+    public List<RumorClient.NodeInfo> getLastCluster() { return List.copyOf(lastCluster); }
 
     // -------------------------------------------------------------------------
     // Lifecycle
