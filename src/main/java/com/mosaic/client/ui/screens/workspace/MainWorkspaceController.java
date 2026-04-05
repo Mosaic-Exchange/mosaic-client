@@ -1,13 +1,20 @@
 package com.mosaic.client.ui.screens.workspace;
 
 import com.mosaic.client.Navigator;
+import com.mosaic.client.db.dao.ChatMessageDao;
+import com.mosaic.client.db.dao.ChatSessionDao;
+import com.mosaic.client.db.model.ChatMessage;
+import com.mosaic.client.db.model.ChatSession;
 
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
@@ -15,6 +22,9 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+
+import java.sql.SQLException;
+import java.util.List;
 
 /**
  * Controller for the Main Workspace screen.
@@ -36,9 +46,19 @@ import javafx.scene.layout.VBox;
  */
 public class MainWorkspaceController {
 
+    // ── DAOs ─────────────────────────────────────────────────
+    private final ChatSessionDao sessionDao = new ChatSessionDao();
+    private final ChatMessageDao messageDao = new ChatMessageDao();
+
+    /** The currently active session (null when no session is open). */
+    private ChatSession currentSession;
+
+    /** Observable list backing the sidebar ListView. */
+    private ObservableList<ChatSession> sessionItems;
+
     // ── MW-2 fields ──────────────────────────────────────────
     @FXML
-    private ListView<String> sessionListView;
+    private ListView<ChatSession> sessionListView;
 
 
     // ── APP-MW-3 (#13) fields ────────────────────────────────
@@ -64,7 +84,6 @@ public class MainWorkspaceController {
     @FXML
     public void initialize() {
         // AC3: Enter sends; Shift+Enter inserts a newline.
-        // Both cases consume the event so JavaFX does not also insert a newline on send.
         messageInput.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ENTER) {
                 event.consume();
@@ -77,13 +96,26 @@ public class MainWorkspaceController {
         });
 
         // AC4: scroll to bottom whenever the chat history grows.
-        // Height listener fires after layout is measured — more reliable than Platform.runLater.
         chatHistory.heightProperty().addListener(
                 (obs, oldHeight, newHeight) -> chatScrollPane.setVvalue(1.0));
 
+        // ── Session list setup (DB-backed) ───────────────────
+        sessionListView.setCellFactory(lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(ChatSession item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.getTopic());
+            }
+        });
+
+        loadSessionList();
+
         sessionListView.getSelectionModel().selectedItemProperty().addListener(
-          (obs, oldVal, newVal) -> { if (newVal != null)
-        loadChat(newVal); }
+            (obs, oldVal, newVal) -> {
+                if (newVal != null) {
+                    loadChat(newVal);
+                }
+            }
         );
 
         // APP-MW-4 (#14): Load expert from current selections, or fall back to default Gardening Expert.
@@ -116,8 +148,32 @@ public class MainWorkspaceController {
         String text = messageInput.getText().trim();
         if (text.isEmpty()) return;
 
-        appendUserMessage(text); // AC3: append to chat window
-        messageInput.clear();    // AC3: clear the input field
+        // Create a new session if none is active
+        if (currentSession == null) {
+            try {
+                // Derive topic from first message (truncated to 100 chars per design doc)
+                String topic = text.length() > 100 ? text.substring(0, 100) : text;
+                currentSession = sessionDao.create(topic);
+                loadSessionList();
+                sessionListView.getSelectionModel().select(currentSession);
+            } catch (SQLException e) {
+                e.printStackTrace();
+                return;
+            }
+        }
+
+        // Persist the message to the database
+        try {
+            String[] expert = Navigator.getActiveExpert();
+            String adapterId = (expert != null) ? expert[3] : null; // adapterFile as ID
+            ChatMessage msg = new ChatMessage(currentSession.getSessionId(), "User", text, adapterId);
+            messageDao.create(msg);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        appendUserMessage(text);
+        messageInput.clear();
     }
 
     // ── APP-MW-5 (#15): Workspace control handlers ───────────
@@ -135,20 +191,31 @@ public class MainWorkspaceController {
     @FXML
     private void onClearContext() {
         chatHistory.getChildren().clear();
+        // Clear context only clears the visual display, not the database
     }
 
     @FXML
     private void onEndSession() {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
-                "End this session? All messages will be cleared.",
+                "End this session? The session and all its messages will be deleted.",
                 ButtonType.OK, ButtonType.CANCEL);
         confirm.setTitle("End Session");
         confirm.setHeaderText(null);
         confirm.showAndWait()
                .filter(btn -> btn == ButtonType.OK)
                .ifPresent(btn -> {
+                   // Delete session from database (cascade deletes messages)
+                   if (currentSession != null) {
+                       try {
+                           sessionDao.delete(currentSession.getSessionId());
+                       } catch (SQLException e) {
+                           e.printStackTrace();
+                       }
+                   }
+                   currentSession = null;
                    chatHistory.getChildren().clear();
                    messageInput.clear();
+                   loadSessionList();
                });
     }
 
@@ -169,16 +236,58 @@ public class MainWorkspaceController {
         chatHistory.getChildren().add(row);
     }
 
-    private void loadChat(String sessionName) {
+    /**
+     * Loads messages from the database for the given session and displays them.
+     */
+    private void loadChat(ChatSession session) {
+        currentSession = session;
         chatHistory.getChildren().clear();
-        if (sessionName.equals("Greek Recipes")) {
-            addUserMessage("How do I make tzaziki?");
-            addExpertMessage("You have to mix yogurt, grated cucumber a lot of dill, olive oil and garlic.");
-        } else if (sessionName.equals("How to Make Tomatoes Grow")) {
-            addUserMessage("How do I make sure my tomatoes are growing?");
-            addExpertMessage("Tomatoes grow best in full sunlight.");
-            addUserMessage("How often should I water them?");
-            addExpertMessage("Water deeply bout 2-3 times per week.");
+        try {
+            List<ChatMessage> messages = messageDao.findBySessionId(session.getSessionId());
+            for (ChatMessage msg : messages) {
+                if ("User".equals(msg.getRole())) {
+                    addUserMessage(msg.getContent());
+                } else {
+                    addExpertMessage(msg.getContent());
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Reloads the session list from the database into the sidebar ListView.
+     */
+    private void loadSessionList() {
+        try {
+            List<ChatSession> sessions = sessionDao.findAll();
+            sessionItems = FXCollections.observableArrayList(sessions);
+            sessionListView.setItems(sessionItems);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Creates a new empty session and selects it in the sidebar.
+     */
+    @FXML
+    private void onNewSession() {
+        try {
+            currentSession = sessionDao.create("New Chat");
+            loadSessionList();
+            // Select the newly created session
+            for (ChatSession s : sessionItems) {
+                if (s.getSessionId() == currentSession.getSessionId()) {
+                    sessionListView.getSelectionModel().select(s);
+                    break;
+                }
+            }
+            chatHistory.getChildren().clear();
+            messageInput.clear();
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 
