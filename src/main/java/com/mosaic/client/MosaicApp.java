@@ -14,16 +14,19 @@ public class MosaicApp extends Application {
 
     /**
      * Called on the launcher thread before the JavaFX stage is shown.
-     * Starts the exchange-server subprocess and waits until it is ready.
+     * Starts the exchange-server subprocess, waits for readiness, and records the result
+     * in Navigator so the splash screen can render the correct state immediately.
      */
     @Override
     public void init() throws Exception {
+        boolean available = false;
         try {
             exchangeServer.start();
-            exchangeServer.waitUntilReady();
+            available = exchangeServer.waitUntilReady();
         } catch (Exception e) {
             System.err.println("[MosaicApp] Could not start exchange server: " + e.getMessage());
         }
+        Navigator.setNetworkAvailable(available);
     }
 
     @Override
@@ -38,21 +41,17 @@ public class MosaicApp extends Application {
 
         MainLayoutController controller = loader.getController();
         Navigator.init(controller);
-        controller.showSplash();
 
-        monitor
-          .onConnectionStateChanged(state ->
-              System.out.println("[Monitor] connection state -> " + state))
-          .onClusterChanged(nodes ->
-              System.out.println("[Monitor] cluster (" + nodes.size() + "): " + nodes))
-          .onPeerStatusChanged((id, st) ->
-              System.out.println("[Monitor] peer " + id + " -> " + st));
+        // Register the monitor before showSplash() so SplashController.initialize()
+        // can subscribe to state-change callbacks.
+        Navigator.setConnectionMonitor(monitor);
+        controller.showSplash();
 
         monitor.start();
     }
 
     /**
-     * Called when the JavaFX application is closing. Shuts down the exchange-server subprocess.
+     * Called when the JavaFX application is closing. Shuts down the monitor and exchange server.
      */
     @Override
     public void stop() {

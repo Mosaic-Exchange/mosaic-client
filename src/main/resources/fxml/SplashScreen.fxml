@@ -4,11 +4,6 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Button?>
 
-<!--
-    Splash screen — shown on launch.
-    TODO APP-2 (#6): Style and expand this into the real splash/landing screen.
-    TODO APP-MW-1 (#11): "Get Started" should navigate to the workspace.
--->
 <VBox xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.mosaic.client.ui.screens.splash.SplashController"
       alignment="CENTER" spacing="20"
@@ -16,6 +11,16 @@
 
     <Label text="Mosaic" styleClass="splash-title"/>
     <Label text="Your intelligent chat client" styleClass="splash-subtitle"/>
+
+    <!-- Network status banner — text and style class set dynamically in SplashController -->
+    <Label fx:id="statusLabel" wrapText="true" maxWidth="400"
+           alignment="CENTER" textAlignment="CENTER"
+           styleClass="splash-status-label"/>
+
+    <!-- Only visible when offline; re-enabled automatically after one poll cycle -->
+    <Button fx:id="retryBtn" text="Retry" visible="false"
+            styleClass="splash-button" onAction="#onRetry"/>
+
     <Button text="Get Started" styleClass="splash-button" onAction="#onGetStarted"/>
 
 </VBox>

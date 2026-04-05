@@ -16,6 +16,10 @@ public class Navigator {
     // Currently selected expert state, shared between screens.
     private static String[] activeExpert;
 
+    // Network availability — set once in MosaicApp.init() before the UI appears.
+    private static boolean           networkAvailable  = false;
+    private static ConnectionMonitor connectionMonitor;
+
     public static void init(MainLayoutController controller) {
         mainLayout = controller;
     }
@@ -42,4 +46,20 @@ public class Navigator {
     public static String[] getActiveExpert() {
         return activeExpert == null ? null : activeExpert.clone();
     }
+
+    // -------------------------------------------------------------------------
+    // Network state
+    // -------------------------------------------------------------------------
+
+    /** Called from {@code MosaicApp.init()} with the result of the server health check. */
+    public static void setNetworkAvailable(boolean available) { networkAvailable = available; }
+
+    /** {@code true} if the exchange-server was reachable before the UI appeared. */
+    public static boolean isNetworkAvailable() { return networkAvailable; }
+
+    /** Called from {@code MosaicApp.start()} so any controller can subscribe to state changes. */
+    public static void setConnectionMonitor(ConnectionMonitor monitor) { connectionMonitor = monitor; }
+
+    /** Returns the shared {@link ConnectionMonitor}, or {@code null} if not yet initialised. */
+    public static ConnectionMonitor getConnectionMonitor() { return connectionMonitor; }
 }

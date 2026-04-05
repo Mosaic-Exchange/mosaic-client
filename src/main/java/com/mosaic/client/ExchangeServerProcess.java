@@ -58,24 +58,25 @@ public class ExchangeServerProcess {
 
     /**
      * Blocks until the exchange-server's HTTP endpoint responds (up to ~10 s).
-     * Logs a warning if the server never becomes ready within the timeout.
      *
+     * @return {@code true} if the server became ready within the timeout, {@code false} otherwise
      * @throws InterruptedException if the waiting thread is interrupted
      */
-    public void waitUntilReady() throws InterruptedException {
+    public boolean waitUntilReady() throws InterruptedException {
         System.out.println("[ExchangeServerProcess] Waiting for server at " + HEALTH_ENDPOINT + " …");
         long deadline = System.currentTimeMillis() + MAX_WAIT_MS;
 
         while (System.currentTimeMillis() < deadline) {
             if (isServerReady()) {
                 System.out.println("[ExchangeServerProcess] Server is ready.");
-                return;
+                return true;
             }
             Thread.sleep(POLL_INTERVAL_MS);
         }
 
         System.err.println("[ExchangeServerProcess] WARNING: Server did not respond within "
             + (MAX_WAIT_MS / 1000) + " s — continuing anyway.");
+        return false;
     }
 
     /**
