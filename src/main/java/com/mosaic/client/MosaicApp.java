@@ -1,3 +1,4 @@
+
 package com.mosaic.client;
 
 import javafx.application.Application;
