@@ -6,4 +6,4 @@
 [submodule "llm-server"]
     path = llm-server
     url = git@github.com:Mosaic-Exchange/llm-server.git
-	branch = develop
+	branch = application-integration
