@@ -42,8 +42,9 @@ public class MosaicApp extends Application {
         MainLayoutController controller = loader.getController();
         Navigator.init(controller);
 
-        // Register the monitor before showSplash() so SplashController.initialize()
-        // can subscribe to state-change callbacks.
+        // Register shared services before showSplash() so any controller's initialize()
+        // can subscribe to callbacks or make HTTP calls immediately.
+        Navigator.setRumorClient(rumorClient);
         Navigator.setConnectionMonitor(monitor);
         controller.showSplash();
 

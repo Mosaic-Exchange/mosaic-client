@@ -323,6 +323,37 @@
     -fx-wrap-text: true;
 }
 
+/* Error bubble — muted red, left-aligned like an expert bubble */
+.message-bubble-error {
+    -fx-background-color: #fdf0f0;
+    -fx-background-radius: 12 12 12 2;
+    -fx-border-color: #c97a7a;
+    -fx-border-width: 1;
+    -fx-border-radius: 12 12 12 2;
+    -fx-padding: 10 14;
+    -fx-max-width: 620;
+}
+.message-bubble-error > .label {
+    -fx-text-fill: #8b2323;
+    -fx-font-size: 13px;
+    -fx-wrap-text: true;
+}
+
+/* Centred notice (e.g. "Response cancelled") */
+.message-notice {
+    -fx-text-fill: #3D5478;
+    -fx-font-size: 12px;
+    -fx-font-style: italic;
+    -fx-padding: 2 10;
+}
+
+/* Typing indicator dots inside an expert bubble */
+.typing-indicator {
+    -fx-text-fill: #8BA3C4;
+    -fx-font-size: 16px;
+    -fx-padding: 0 4;
+}
+
 /* Sender name above an expert bubble ("Mosaic" / expert name) */
 .message-sender-label {
     -fx-text-fill: #3D5478;

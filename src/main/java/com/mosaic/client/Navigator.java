@@ -19,6 +19,7 @@ public class Navigator {
     // Network availability — set once in MosaicApp.init() before the UI appears.
     private static boolean           networkAvailable  = false;
     private static ConnectionMonitor connectionMonitor;
+    private static RumorClient       rumorClient;
 
     public static void init(MainLayoutController controller) {
         mainLayout = controller;
@@ -62,4 +63,10 @@ public class Navigator {
 
     /** Returns the shared {@link ConnectionMonitor}, or {@code null} if not yet initialised. */
     public static ConnectionMonitor getConnectionMonitor() { return connectionMonitor; }
+
+    /** Called from {@code MosaicApp.start()} so controllers can make HTTP calls. */
+    public static void setRumorClient(RumorClient client) { rumorClient = client; }
+
+    /** Returns the shared {@link RumorClient}, or {@code null} if not yet initialised. */
+    public static RumorClient getRumorClient() { return rumorClient; }
 }
