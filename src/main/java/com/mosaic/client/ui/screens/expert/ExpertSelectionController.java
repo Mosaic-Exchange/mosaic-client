@@ -110,11 +110,12 @@ public class ExpertSelectionController {
             // Seed the list immediately with whatever the monitor last saw.
             // Without this, opening the screen after a stable cluster never triggers
             // onClusterChanged (no change detected) and the spinner would spin forever.
-            if (mon.getCurrentState() != ConnectionMonitor.State.CONNECTING) {
-                refreshFromCluster(mon.getLastCluster());
-            } else if (mon.getCurrentState() == ConnectionMonitor.State.DISCONNECTED) {
+            if (mon.getCurrentState() == ConnectionMonitor.State.DISCONNECTED) {
                 showError();
+            } else if (mon.getCurrentState() != ConnectionMonitor.State.CONNECTING) {
+                refreshFromCluster(mon.getLastCluster());
             }
+            // else: still CONNECTING — stay in LOADING until onClusterChanged fires.
         }
     }
 

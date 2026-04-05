@@ -299,8 +299,10 @@ public class RumorClient {
             boolean self    = extractBool(obj, "self", false);
 
             // Extract SHARED_FILES from the nested appStates object.
+            // The server stores the key as serviceName() + "." + rawKey, so the
+            // actual gossip key is "FileDownloadService.SHARED_FILES".
             String appStates   = extractJsonObject(obj, "appStates");
-            String sharedFiles = appStates != null ? extractStr(appStates, "SHARED_FILES") : "";
+            String sharedFiles = appStates != null ? extractStr(appStates, "FileDownloadService.SHARED_FILES") : "";
 
             List<String> serviceList = (services == null || services.isEmpty())
                 ? Collections.emptyList()
