@@ -151,7 +151,10 @@ public class MainWorkspaceController {
 
         String[] expert  = Navigator.getActiveExpert();
         boolean  isLocal = expert == null || "Local".equalsIgnoreCase(expert[2]);
-        String   model   = expert != null ? expert[3] : null;
+        //String   model   = expert != null ? expert[3] : null;
+
+        // TODO: revert to expert[3] once llm-server replaces Ollama — adapter filename will be the model identifier
+        String model = null;
 
         RumorClient client = Navigator.getRumorClient();
         if (client == null) {
