@@ -1,9 +1,8 @@
 package com.mosaic.client.ui.screens.workspace;
 
-import com.mosaic.client.ConnectionMonitor;
 import com.mosaic.client.InferenceSession;
 import com.mosaic.client.Navigator;
-import com.mosaic.client.RumorClient;
+import com.mosaic.client.NetworkManager;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -29,7 +28,7 @@ import javafx.util.Duration;
  * APP-MW-3 (#13): Message input + send      — DONE
  * APP-MW-4 (#14): Expert metadata panel     — DONE
  * APP-MW-5 (#15): Workspace controls        — DONE
- * Network integration (BLOCK 8):            — DONE (inference wiring, stop, live status)
+ * Network integration (BLOCK 8):            — DONE (RService direct, stop, live status)
  */
 public class MainWorkspaceController {
 
@@ -102,16 +101,16 @@ public class MainWorkspaceController {
         }
 
         // Subscribe to live peer status changes for the active expert.
-        ConnectionMonitor mon = Navigator.getConnectionMonitor();
-        if (mon != null) {
-            mon.onPeerStatusChanged((nodeId, status) -> {
+        NetworkManager mgr = Navigator.getNetworkManager();
+        if (mgr != null) {
+            mgr.onPeerStatusChanged((nodeId, status) -> {
                 String[] exp = Navigator.getActiveExpert();
                 // Only update the panel for Remote experts (Local inference is always available).
                 if (exp != null && "Remote".equalsIgnoreCase(exp[2])) {
                     boolean alive = "ALIVE".equalsIgnoreCase(status);
                     String displayStatus = alive ? "Connected" : "Disconnected";
                     String cssClass      = alive ? "expert-status-connected" : "expert-status-disconnected";
-                    // Callback is already dispatched via Platform.runLater() by ConnectionMonitor.
+                    // Callback is already dispatched via Platform.runLater() by NetworkManager.
                     metaExpertStatus.setText(displayStatus);
                     metaExpertStatus.getStyleClass()
                         .removeAll("expert-status-connected", "expert-status-disconnected");
@@ -151,18 +150,17 @@ public class MainWorkspaceController {
 
         String[] expert  = Navigator.getActiveExpert();
         boolean  isLocal = expert == null || "Local".equalsIgnoreCase(expert[2]);
-        //String   model   = expert != null ? expert[3] : null;
 
         // TODO: revert to expert[3] once llm-server replaces Ollama — adapter filename will be the model identifier
         String model = null;
 
-        RumorClient client = Navigator.getRumorClient();
-        if (client == null) {
-            appendErrorBubble("Network client not initialised — cannot send request.");
+        NetworkManager mgr = Navigator.getNetworkManager();
+        if (mgr == null || mgr.inferenceService() == null) {
+            appendErrorBubble("Network not initialised — cannot send request.");
             return;
         }
 
-        currentSession = new InferenceSession(client)
+        currentSession = new InferenceSession(mgr.inferenceService())
             .onWaiting(this::onSessionWaiting)
             .onToken(this::onSessionToken)
             .onDone(this::onSessionDone)

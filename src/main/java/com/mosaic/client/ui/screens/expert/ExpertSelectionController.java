@@ -1,8 +1,8 @@
 package com.mosaic.client.ui.screens.expert;
 
-import com.mosaic.client.ConnectionMonitor;
 import com.mosaic.client.Navigator;
-import com.mosaic.client.RumorClient;
+import com.mosaic.client.NetworkManager;
+import com.mosaic.client.NetworkManager.NodeSnapshot;
 
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -12,17 +12,21 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 
+import org.rumor.service.RequestEvent;
+import org.rumor.service.ServiceHandle;
+
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Controller for the Expert Selection screen.
  *
  * APP-4 (#8) — Network-aware implementation
  *   AC1: Filters panel (domain / source / availability dropdowns) — populated dynamically
- *   AC2: ListView driven by live cluster data from ConnectionMonitor
+ *   AC2: ListView driven by live cluster data from NetworkManager
  *   AC3: Selecting an expert updates the detail panel
  *   AC4: "Confirm" — disabled for Disconnected experts
- *   AC5: "Download" — calls RumorClient.startDownload(), streams progress bar
+ *   AC5: "Download" — calls FileDownloadService.downloadFrom(), streams progress bar
  */
 public class ExpertSelectionController {
 
@@ -57,6 +61,8 @@ public class ExpertSelectionController {
     private Expert selectedExpert;
     private final ObservableList<Expert> allExperts     = FXCollections.observableArrayList();
     private FilteredList<Expert>         filteredExperts;
+
+    private ServiceHandle activeDownload;
 
     // -------------------------------------------------------------------------
     // Initialisation
@@ -97,23 +103,23 @@ public class ExpertSelectionController {
         showLoading();
 
         // Subscribe to live cluster data.
-        ConnectionMonitor mon = Navigator.getConnectionMonitor();
-        if (mon != null) {
-            // onClusterChanged is already dispatched on the FX thread by ConnectionMonitor.
-            mon.onClusterChanged(this::refreshFromCluster);
-            mon.onConnectionStateChanged(state -> {
-                if (state == ConnectionMonitor.State.DISCONNECTED) showError();
-                else if (state == ConnectionMonitor.State.CONNECTING) showLoading();
+        NetworkManager mgr = Navigator.getNetworkManager();
+        if (mgr != null) {
+            // onClusterChanged is already dispatched on the FX thread by NetworkManager.
+            mgr.onClusterChanged(this::refreshFromCluster);
+            mgr.onConnectionStateChanged(state -> {
+                if (state == NetworkManager.State.DISCONNECTED) showError();
+                else if (state == NetworkManager.State.CONNECTING) showLoading();
                 // CONNECTED / DEGRADED: onClusterChanged handles list updates.
             });
 
-            // Seed the list immediately with whatever the monitor last saw.
+            // Seed the list immediately with whatever the manager last saw.
             // Without this, opening the screen after a stable cluster never triggers
             // onClusterChanged (no change detected) and the spinner would spin forever.
-            if (mon.getCurrentState() == ConnectionMonitor.State.DISCONNECTED) {
+            if (mgr.getCurrentState() == NetworkManager.State.DISCONNECTED) {
                 showError();
-            } else if (mon.getCurrentState() != ConnectionMonitor.State.CONNECTING) {
-                refreshFromCluster(mon.getLastCluster());
+            } else if (mgr.getCurrentState() != NetworkManager.State.CONNECTING) {
+                refreshFromCluster(mgr.getLastCluster());
             }
             // else: still CONNECTING — stay in LOADING until onClusterChanged fires.
         }
@@ -123,9 +129,9 @@ public class ExpertSelectionController {
     // Cluster → Expert mapping
     // -------------------------------------------------------------------------
 
-    private void refreshFromCluster(List<RumorClient.NodeInfo> cluster) {
+    private void refreshFromCluster(List<NodeSnapshot> cluster) {
         List<Expert> mapped = new ArrayList<>();
-        for (RumorClient.NodeInfo node : cluster) {
+        for (NodeSnapshot node : cluster) {
             // Only expose nodes that run InferenceService.
             boolean hasInference = node.services().stream()
                 .anyMatch(s -> s.contains("InferenceService"));
@@ -149,7 +155,7 @@ public class ExpertSelectionController {
         else showList();
     }
 
-    private static Expert nodeToExpert(RumorClient.NodeInfo node) {
+    private static Expert nodeToExpert(NodeSnapshot node) {
         String source  = node.self() ? "Local" : "Remote";
         String status  = "ALIVE".equalsIgnoreCase(node.status()) ? "Connected" : "Disconnected";
 
@@ -283,58 +289,96 @@ public class ExpertSelectionController {
     }
 
     // -------------------------------------------------------------------------
-    // AC5: Download with progress
+    // AC5: Download with progress via FileDownloadService
     // -------------------------------------------------------------------------
 
     @FXML
     private void onDownload() {
         if (selectedExpert == null || selectedExpert.adapterFile().isEmpty()) return;
-        RumorClient client = Navigator.getRumorClient();
-        if (client == null) return;
 
-        String file = selectedExpert.adapterFile();
+        NetworkManager mgr = Navigator.getNetworkManager();
+        if (mgr == null || mgr.fileDownloadService() == null) return;
+
+        String file      = selectedExpert.adapterFile();
+        long   totalBytes = resolveFileSize(file);
+
         downloadBtn.setDisable(true);
         downloadProgressSection.setVisible(true);
         downloadStatusLabel.setText("Starting download…");
         downloadProgressBar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
 
-        Thread.ofVirtual().start(() -> {
-            // startDownload() blocks until the server acknowledges the request.
-            try {
-                client.startDownload(file);
-            } catch (Exception e) {
-                Platform.runLater(() -> {
-                    downloadStatusLabel.setText("Failed to start: " + e.getMessage());
-                    downloadProgressBar.setProgress(0);
-                    downloadBtn.setDisable(false);
-                });
-                return;
-            }
+        AtomicLong bytesReceived = new AtomicLong(0);
 
-            // subscribeDownloadProgress() starts its own virtual thread and returns immediately.
-            // Callbacks arrive on that thread — always wrap with Platform.runLater().
-            client.subscribeDownloadProgress(
-                progress -> Platform.runLater(() -> {
-                    double pct = progress.totalBytes() > 0
-                        ? (double) progress.bytesReceived() / progress.totalBytes()
-                        : ProgressBar.INDETERMINATE_PROGRESS;
-                    downloadProgressBar.setProgress(pct);
-                    downloadStatusLabel.setText(String.format("Downloading…  %s / %s",
-                        humanBytes(progress.bytesReceived()), humanBytes(progress.totalBytes())));
-                }),
-                () -> Platform.runLater(this::onDownloadComplete),
-                err -> Platform.runLater(() -> {
-                    downloadStatusLabel.setText("Download failed: " + err);
-                    downloadProgressBar.setProgress(0);
-                    downloadBtn.setDisable(false);
-                })
-            );
+        // downloadFrom() is non-blocking — it returns a handle immediately and fires
+        // the callback on the framework's thread. Always wrap UI updates in runLater().
+        activeDownload = mgr.fileDownloadService().downloadFrom(file, event -> {
+            switch (event) {
+                case RequestEvent.Processing<?> p ->
+                    Platform.runLater(() -> {
+                        downloadStatusLabel.setText("Connecting to peer…");
+                        downloadProgressBar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
+                    });
+
+                case RequestEvent.StreamData<?> sd -> {
+                    long received = bytesReceived.addAndGet(sd.raw().length);
+                    Platform.runLater(() -> {
+                        double pct = totalBytes > 0
+                            ? (double) received / totalBytes
+                            : ProgressBar.INDETERMINATE_PROGRESS;
+                        downloadProgressBar.setProgress(pct);
+                        downloadStatusLabel.setText(String.format("Downloading…  %s / %s",
+                            humanBytes(received), humanBytes(totalBytes)));
+                    });
+                }
+
+                case RequestEvent.Succeeded<?> s ->
+                    Platform.runLater(this::onDownloadComplete);
+
+                case RequestEvent.Failed<?> f ->
+                    Platform.runLater(() -> {
+                        downloadStatusLabel.setText("Download failed: " + f.reason());
+                        downloadProgressBar.setProgress(0);
+                        downloadBtn.setDisable(false);
+                        activeDownload = null;
+                    });
+
+                case RequestEvent.Cancelled<?> c ->
+                    Platform.runLater(() -> {
+                        downloadStatusLabel.setText("Download cancelled");
+                        downloadProgressBar.setProgress(0);
+                        downloadBtn.setDisable(false);
+                        activeDownload = null;
+                    });
+            }
         });
+    }
+
+    /**
+     * Looks up the file size from gossip state (NodeSnapshot.sharedFiles)
+     * so we can show a determinate progress bar.
+     */
+    private long resolveFileSize(String fileName) {
+        NetworkManager mgr = Navigator.getNetworkManager();
+        if (mgr == null) return 0;
+        for (NodeSnapshot node : mgr.getLastCluster()) {
+            if (node.self()) continue;
+            String sf = node.sharedFiles();
+            if (sf == null || sf.isEmpty()) continue;
+            for (String entry : sf.split(",")) {
+                int colon = entry.lastIndexOf(':');
+                if (colon > 0 && entry.substring(0, colon).equals(fileName)) {
+                    try { return Long.parseLong(entry.substring(colon + 1)); }
+                    catch (NumberFormatException ignored) {}
+                }
+            }
+        }
+        return 0;
     }
 
     private void onDownloadComplete() {
         downloadProgressBar.setProgress(1.0);
         downloadStatusLabel.setText("Download complete");
+        activeDownload = null;
 
         // Promote the expert's status to Connected in the list and detail panel.
         if (selectedExpert != null) {
@@ -353,8 +397,8 @@ public class ExpertSelectionController {
 
     @FXML
     private void onRetry() {
-        // Transition to LOADING state — ConnectionMonitor will fire onClusterChanged /
-        // onConnectionStateChanged automatically if the server becomes reachable.
+        // Transition to LOADING state — NetworkManager will fire onClusterChanged /
+        // onConnectionStateChanged automatically if peers become reachable.
         showLoading();
     }
 

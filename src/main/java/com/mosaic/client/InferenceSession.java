@@ -1,15 +1,20 @@
 package com.mosaic.client;
 
 import javafx.application.Platform;
+import org.rumor.app.InferenceRequest;
+import org.rumor.app.InferenceService;
+import org.rumor.service.RequestEvent;
+import org.rumor.service.ServiceHandle;
 
+import java.nio.charset.StandardCharsets;
 import java.util.function.Consumer;
 
 /**
- * Manages a single inference request lifecycle.
+ * Manages a single inference request lifecycle via the RService API.
  *
  * <p>States:
  * <ul>
- *   <li>{@link State#WAITING}   — request sent, waiting for first response from server</li>
+ *   <li>{@link State#WAITING}   — request dispatched, waiting for first response</li>
  *   <li>{@link State#STREAMING} — tokens are arriving</li>
  *   <li>{@link State#DONE}      — inference completed normally</li>
  *   <li>{@link State#ERROR}     — inference failed</li>
@@ -22,7 +27,7 @@ public class InferenceSession {
 
     public enum State { WAITING, STREAMING, DONE, ERROR, CANCELLED }
 
-    private final RumorClient client;
+    private final InferenceService inferenceService;
 
     private Runnable         onWaiting;
     private Consumer<String> onToken;
@@ -30,10 +35,11 @@ public class InferenceSession {
     private Consumer<String> onError;
     private Runnable         onCancelled;
 
-    private volatile boolean cancelled = false;
+    private volatile ServiceHandle handle;
+    private volatile boolean       cancelled = false;
 
-    public InferenceSession(RumorClient client) {
-        this.client = client;
+    public InferenceSession(InferenceService inferenceService) {
+        this.inferenceService = inferenceService;
     }
 
     // -------------------------------------------------------------------------
@@ -52,45 +58,68 @@ public class InferenceSession {
 
     /**
      * Starts the inference request.
-     * Immediately fires {@code onWaiting} on the FX thread, then streams tokens as they arrive.
+     *
+     * <p>For {@code isLocal = true}, the request is executed on this node via
+     * {@link InferenceService#request}. For {@code isLocal = false}, it is dispatched
+     * to a remote peer via {@link InferenceService#dispatch}.
      *
      * @param prompt  the user prompt
      * @param isLocal {@code true} = run on this node; {@code false} = dispatch to network
-     * @param model   model/adapter filename (may be {@code null} to use server default)
+     * @param model   model/adapter filename (may be {@code null} to use service default)
      */
     public void start(String prompt, boolean isLocal, String model) {
-        // Enter WAITING state right away — no need to wait for HTTP round-trip.
         Platform.runLater(() -> { if (onWaiting != null) onWaiting.run(); });
 
-        client.sendMessage(
-            prompt, model, isLocal,
-            // onToken — called on RumorClient's virtual thread
-            token -> {
-                if (cancelled) return;
-                Platform.runLater(() -> { if (onToken != null) onToken.accept(token); });
-            },
-            // onDone
-            () -> {
-                if (cancelled) return;
-                Platform.runLater(() -> { if (onDone != null) onDone.run(); });
-            },
-            // onError
-            reason -> {
-                if (cancelled) return;
-                Platform.runLater(() -> { if (onError != null) onError.accept(reason); });
-            }
-        );
+        InferenceRequest req = new InferenceRequest(prompt, model);
+
+        // The RService callback is invoked on the framework's thread — always use
+        // Platform.runLater() before touching any JavaFX node.
+        if (isLocal) {
+            handle = inferenceService.request(req, this::onEvent);
+        } else {
+            handle = inferenceService.dispatch(req, this::onEvent);
+        }
     }
 
     /**
      * Cancels the active inference request.
-     * Fires {@code onCancelled} on the FX thread once the server acknowledges cancellation.
+     * Fires {@code onCancelled} on the FX thread once the handle is cancelled.
      */
     public void cancel() {
         cancelled = true;
-        Thread.ofVirtual().start(() -> {
-            try { client.cancelInference(); } catch (Exception ignored) {}
-            Platform.runLater(() -> { if (onCancelled != null) onCancelled.run(); });
-        });
+        ServiceHandle h = handle;
+        if (h != null) {
+            h.cancel();
+        }
+        // onEvent will receive RequestEvent.Cancelled and fire onCancelled for us.
+        // If dispatch hasn't returned the handle yet, the cancelled flag above is
+        // checked before every callback, so no spurious callbacks will fire.
+    }
+
+    // -------------------------------------------------------------------------
+    // RService event handler — called on the framework thread
+    // -------------------------------------------------------------------------
+
+    private void onEvent(RequestEvent<byte[]> event) {
+        switch (event) {
+            case RequestEvent.Processing<?> p -> {
+                // Already fired onWaiting via Platform.runLater in start() — no-op here.
+            }
+            case RequestEvent.StreamData<?> sd -> {
+                if (cancelled) return;
+                String token = new String(sd.raw(), StandardCharsets.UTF_8);
+                Platform.runLater(() -> { if (onToken != null) onToken.accept(token); });
+            }
+            case RequestEvent.Succeeded<?> s -> {
+                if (cancelled) return;
+                Platform.runLater(() -> { if (onDone != null) onDone.run(); });
+            }
+            case RequestEvent.Failed<?> f -> {
+                if (cancelled) return;
+                Platform.runLater(() -> { if (onError != null) onError.accept(f.reason()); });
+            }
+            case RequestEvent.Cancelled<?> c ->
+                Platform.runLater(() -> { if (onCancelled != null) onCancelled.run(); });
+        }
     }
 }

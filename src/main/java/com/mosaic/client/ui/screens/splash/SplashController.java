@@ -1,7 +1,7 @@
 package com.mosaic.client.ui.screens.splash;
 
-import com.mosaic.client.ConnectionMonitor;
 import com.mosaic.client.Navigator;
+import com.mosaic.client.NetworkManager;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -17,12 +17,12 @@ public class SplashController {
         // Network availability is already known — MosaicApp.init() ran before the UI appeared.
         updateNetworkUI(Navigator.isNetworkAvailable());
 
-        // Subscribe so the label updates automatically if the server comes up later.
-        ConnectionMonitor mon = Navigator.getConnectionMonitor();
-        if (mon != null) {
-            mon.onConnectionStateChanged(state -> {
-                boolean online = state == ConnectionMonitor.State.CONNECTED
-                              || state == ConnectionMonitor.State.DEGRADED;
+        // Subscribe so the label updates automatically if the node connects later.
+        NetworkManager mgr = Navigator.getNetworkManager();
+        if (mgr != null) {
+            mgr.onConnectionStateChanged(state -> {
+                boolean online = state == NetworkManager.State.CONNECTED
+                              || state == NetworkManager.State.DEGRADED;
                 updateNetworkUI(online);
             });
         }
@@ -41,7 +41,7 @@ public class SplashController {
             }
             retryBtn.setVisible(false);
         } else {
-            statusLabel.setText("Network server unavailable — remote inference and peer discovery will be off");
+            statusLabel.setText("Network unavailable — remote inference and peer discovery will be off");
             statusLabel.getStyleClass().remove("splash-status-connected");
             if (!statusLabel.getStyleClass().contains("splash-status-offline")) {
                 statusLabel.getStyleClass().add("splash-status-offline");
@@ -56,11 +56,11 @@ public class SplashController {
 
     @FXML
     private void onRetry() {
-        // Disable for ~3.5 s — ConnectionMonitor polls every 3 s, so if the server comes
-        // up it will fire onConnectionStateChanged automatically and update the label.
+        // Disable for ~2 s — NetworkManager polls every 1 s, so if peers appear
+        // it will fire onConnectionStateChanged automatically and update the label.
         retryBtn.setDisable(true);
         Thread.ofVirtual().start(() -> {
-            try { Thread.sleep(3_500); } catch (InterruptedException ignored) {}
+            try { Thread.sleep(2_000); } catch (InterruptedException ignored) {}
             Platform.runLater(() -> retryBtn.setDisable(false));
         });
     }

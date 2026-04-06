@@ -1,4 +1,3 @@
-
 package com.mosaic.client;
 
 import javafx.application.Application;
@@ -8,23 +7,29 @@ import javafx.stage.Stage;
 
 public class MosaicApp extends Application {
 
-    private final ExchangeServerProcess exchangeServer = new ExchangeServerProcess();
-    private final RumorClient           rumorClient    = new RumorClient();
-    private final ConnectionMonitor     monitor        = new ConnectionMonitor(rumorClient);
+    private final NetworkManager networkManager = new NetworkManager();
 
     /**
      * Called on the launcher thread before the JavaFX stage is shown.
-     * Starts the exchange-server subprocess, waits for readiness, and records the result
-     * in Navigator so the splash screen can render the correct state immediately.
+     * Starts the local Rumor node and records availability in Navigator so the
+     * splash screen can render the correct state immediately.
+     *
+     * TODO: read localHost / localPort / seedHost / seedPort from the Settings screen
+     *       once that screen supports persisting network configuration.
      */
     @Override
     public void init() throws Exception {
+        String localHost = "127.0.0.1";
+        int    localPort = 7010;
+        String seedHost  = "127.0.0.1";
+        int    seedPort  = 7001;
+
         boolean available = false;
         try {
-            exchangeServer.start();
-            available = exchangeServer.waitUntilReady();
+            networkManager.start(localHost, localPort, seedHost, seedPort);
+            available = true;
         } catch (Exception e) {
-            System.err.println("[MosaicApp] Could not start exchange server: " + e.getMessage());
+            System.err.println("[MosaicApp] Could not start Rumor node: " + e.getMessage());
         }
         Navigator.setNetworkAvailable(available);
     }
@@ -42,22 +47,18 @@ public class MosaicApp extends Application {
         MainLayoutController controller = loader.getController();
         Navigator.init(controller);
 
-        // Register shared services before showSplash() so any controller's initialize()
-        // can subscribe to callbacks or make HTTP calls immediately.
-        Navigator.setRumorClient(rumorClient);
-        Navigator.setConnectionMonitor(monitor);
+        // Register the network manager before showSplash() so any controller's
+        // initialize() can subscribe to callbacks immediately.
+        Navigator.setNetworkManager(networkManager);
         controller.showSplash();
-
-        monitor.start();
     }
 
     /**
-     * Called when the JavaFX application is closing. Shuts down the monitor and exchange server.
+     * Called when the JavaFX application is closing. Shuts down the Rumor node.
      */
     @Override
     public void stop() {
-        monitor.stop();
-        exchangeServer.stop();
+        networkManager.stop();
     }
 
     public static void main(String[] args) {

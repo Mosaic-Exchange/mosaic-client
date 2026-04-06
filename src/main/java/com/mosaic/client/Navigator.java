@@ -16,10 +16,9 @@ public class Navigator {
     // Currently selected expert state, shared between screens.
     private static String[] activeExpert;
 
-    // Network availability — set once in MosaicApp.init() before the UI appears.
-    private static boolean           networkAvailable  = false;
-    private static ConnectionMonitor connectionMonitor;
-    private static RumorClient       rumorClient;
+    // Network state — set in MosaicApp before the UI appears.
+    private static boolean        networkAvailable = false;
+    private static NetworkManager networkManager;
 
     public static void init(MainLayoutController controller) {
         mainLayout = controller;
@@ -52,21 +51,15 @@ public class Navigator {
     // Network state
     // -------------------------------------------------------------------------
 
-    /** Called from {@code MosaicApp.init()} with the result of the server health check. */
+    /** Called from {@code MosaicApp.init()} with the result of the node startup. */
     public static void setNetworkAvailable(boolean available) { networkAvailable = available; }
 
-    /** {@code true} if the exchange-server was reachable before the UI appeared. */
+    /** {@code true} if the Rumor node started successfully before the UI appeared. */
     public static boolean isNetworkAvailable() { return networkAvailable; }
 
     /** Called from {@code MosaicApp.start()} so any controller can subscribe to state changes. */
-    public static void setConnectionMonitor(ConnectionMonitor monitor) { connectionMonitor = monitor; }
+    public static void setNetworkManager(NetworkManager manager) { networkManager = manager; }
 
-    /** Returns the shared {@link ConnectionMonitor}, or {@code null} if not yet initialised. */
-    public static ConnectionMonitor getConnectionMonitor() { return connectionMonitor; }
-
-    /** Called from {@code MosaicApp.start()} so controllers can make HTTP calls. */
-    public static void setRumorClient(RumorClient client) { rumorClient = client; }
-
-    /** Returns the shared {@link RumorClient}, or {@code null} if not yet initialised. */
-    public static RumorClient getRumorClient() { return rumorClient; }
+    /** Returns the shared {@link NetworkManager}, or {@code null} if not yet initialised. */
+    public static NetworkManager getNetworkManager() { return networkManager; }
 }
