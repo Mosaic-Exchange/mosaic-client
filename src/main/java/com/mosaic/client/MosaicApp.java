@@ -1,3 +1,4 @@
+
 package com.mosaic.client;
 
 import com.mosaic.client.db.DatabaseManager;
