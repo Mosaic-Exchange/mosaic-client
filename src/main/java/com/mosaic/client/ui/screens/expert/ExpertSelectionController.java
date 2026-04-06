@@ -15,6 +15,11 @@ import javafx.scene.layout.VBox;
 import org.rumor.service.RequestEvent;
 import org.rumor.service.ServiceHandle;
 
+import java.io.BufferedOutputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -299,8 +304,20 @@ public class ExpertSelectionController {
         NetworkManager mgr = Navigator.getNetworkManager();
         if (mgr == null || mgr.fileDownloadService() == null) return;
 
-        String file      = selectedExpert.adapterFile();
+        String file       = selectedExpert.adapterFile();
         long   totalBytes = resolveFileSize(file);
+
+        // Create ~/mosaic-shared/ if it doesn't exist and open the destination file.
+        Path sharedDir = Path.of(System.getProperty("user.home"), "mosaic-shared");
+        Path dest      = sharedDir.resolve(file);
+        BufferedOutputStream out;
+        try {
+            Files.createDirectories(sharedDir);
+            out = new BufferedOutputStream(new FileOutputStream(dest.toFile()));
+        } catch (IOException e) {
+            downloadStatusLabel.setText("Cannot open destination: " + e.getMessage());
+            return;
+        }
 
         downloadBtn.setDisable(true);
         downloadProgressSection.setVisible(true);
@@ -320,6 +337,22 @@ public class ExpertSelectionController {
                     });
 
                 case RequestEvent.StreamData<?> sd -> {
+                    try {
+                        out.write(sd.raw());
+                    } catch (IOException e) {
+                        closeQuietly(out);
+                        deleteQuietly(dest);
+                        Platform.runLater(() -> {
+                            downloadStatusLabel.setText("Write error: " + e.getMessage());
+                            downloadProgressBar.setProgress(0);
+                            downloadBtn.setDisable(false);
+                            activeDownload = null;
+                        });
+                        // Cancel the download so no further chunks arrive.
+                        ServiceHandle h = activeDownload;
+                        if (h != null) h.cancel();
+                        return;
+                    }
                     long received = bytesReceived.addAndGet(sd.raw().length);
                     Platform.runLater(() -> {
                         double pct = totalBytes > 0
@@ -331,26 +364,42 @@ public class ExpertSelectionController {
                     });
                 }
 
-                case RequestEvent.Succeeded<?> s ->
+                case RequestEvent.Succeeded<?> s -> {
+                    closeQuietly(out);
                     Platform.runLater(this::onDownloadComplete);
+                }
 
-                case RequestEvent.Failed<?> f ->
+                case RequestEvent.Failed<?> f -> {
+                    closeQuietly(out);
+                    deleteQuietly(dest);
                     Platform.runLater(() -> {
                         downloadStatusLabel.setText("Download failed: " + f.reason());
                         downloadProgressBar.setProgress(0);
                         downloadBtn.setDisable(false);
                         activeDownload = null;
                     });
+                }
 
-                case RequestEvent.Cancelled<?> c ->
+                case RequestEvent.Cancelled<?> c -> {
+                    closeQuietly(out);
+                    deleteQuietly(dest);
                     Platform.runLater(() -> {
                         downloadStatusLabel.setText("Download cancelled");
                         downloadProgressBar.setProgress(0);
                         downloadBtn.setDisable(false);
                         activeDownload = null;
                     });
+                }
             }
         });
+    }
+
+    private static void closeQuietly(BufferedOutputStream out) {
+        try { out.close(); } catch (IOException ignored) {}
+    }
+
+    private static void deleteQuietly(Path path) {
+        try { Files.deleteIfExists(path); } catch (IOException ignored) {}
     }
 
     /**
