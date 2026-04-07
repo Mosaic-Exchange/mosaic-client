@@ -111,6 +111,13 @@ public class MainWorkspaceController {
         }
 
         aiServer = new AIServer(Optional.empty(), Optional.empty());
+        aiServer.lastGeneratedProperty().addListener(
+                (observable, oldValue, newValue) -> {
+                    if (newValue != null) {
+                        appendExpertMessage(newValue);
+                    }
+                }
+        );
     }
 
     // ── APP-MW-4 (#14): Expert metadata helpers ──────────────
@@ -140,9 +147,7 @@ public class MainWorkspaceController {
             System.out.println("Start AI server...");
             aiServer.startServer("127.0.0.1", 4000);
         }
-        String response = aiServer.generateResponse(text, 32, Optional.empty());
-
-        appendExpertMessage(response);
+        aiServer.generateResponse(text, 32);
     }
 
     // ── APP-MW-5 (#15): Workspace control handlers ───────────

@@ -1,5 +1,8 @@
 package com.mosaic.client;
 
+import javafx.beans.property.ReadOnlyStringProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.concurrent.Task;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -15,6 +18,9 @@ import java.util.Optional;
 
 
 public class AIServer {
+    // Observables
+    private final SimpleStringProperty lastGenerated = new SimpleStringProperty();
+
     // Default file locations
     private final Path DEFAULT_SERVER_DIR = FileSystems.getDefault().getPath("llmserver");
     private final Path DEFAULT_LOG_FILE = FileSystems.getDefault().getPath("llmserver.log");
@@ -74,6 +80,8 @@ public class AIServer {
 //                .start();
     }
 
+    public ReadOnlyStringProperty lastGeneratedProperty() { return lastGenerated; }
+
     private void ensureHttpClient() {
         if (httpClient == null || httpClient.isTerminated()) {
             httpClient = HttpClient.newHttpClient();
@@ -90,17 +98,61 @@ public class AIServer {
         return this.lastId++;
     }
 
-    public String generateResponse(
-            String message,
+    public Void generateResponse(
+            String prompt,
+            int maxTokens
+    ) {
+        return generateResponse(prompt, maxTokens, null);
+    }
+
+    /**
+     * Send a request to the LLM.
+     * @param prompt Input prompt.
+     * @param maxTokens Input maximum tokens.
+     * @param adapterId The adapter to use for the inference.
+     */
+    public Void generateResponse(
+            String prompt,
             int maxTokens,
-            Optional<String> adapterId
-    ) throws IllegalCallerException, IOException, InterruptedException {
+            String adapterId
+    ) {
         ensureHttpClient();
         ensureNoConcurrentRequest();
 
+        // Create a task to send the request
+        Task<String> request = new Task<String>() {
+            @Override
+            protected String call() throws Exception {
+                return generateResponseSync(
+                    prompt,
+                    maxTokens,
+                    Optional.ofNullable(adapterId)
+                );
+            }
+        };
+
+        // Ensure this property is updated with the latest value upon completion
+        lastGenerated.bind(request.valueProperty());
+
+        // Run the task
+        Thread th = new Thread(request);
+        th.setDaemon(true);
+        th.start();
+
+        return null;
+    }
+
+    /**
+     * Synchronous AI generation request, which generally should not be used. Called by generateResponse.
+     */
+    public final String generateResponseSync(
+            String prompt,
+            int maxTokens,
+            Optional<String> adapterId
+    ) throws IllegalCallerException, IOException, InterruptedException {
         JSONObject requestBody = new JSONObject();
         requestBody.put("request_id", String.valueOf(getRequestId()));
-        requestBody.put("message", message);
+        requestBody.put("message", prompt);
         requestBody.put("max_tokens", maxTokens);
         adapterId.ifPresent(s -> requestBody.put("adapter_id", s));
 
@@ -115,11 +167,8 @@ public class AIServer {
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-        // TODO: Add response format validation
         JSONObject responseBody = new JSONObject(response.body());
 
         return responseBody.getString("output");
-
-//        return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString());
     }
 }
