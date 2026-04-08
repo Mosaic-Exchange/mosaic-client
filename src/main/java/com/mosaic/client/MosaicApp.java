@@ -22,6 +22,12 @@ public class MosaicApp extends Application {
         controller.showSplash();
     }
 
+    @Override
+    public void stop() throws Exception {
+        AIServer.getInstance().stopServer();
+        super.stop();
+    }
+
     public static void main(String[] args) {
         launch(args);
     }

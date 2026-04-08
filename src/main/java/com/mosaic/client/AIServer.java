@@ -1,8 +1,9 @@
 package com.mosaic.client;
 
-import javafx.beans.property.ReadOnlyStringProperty;
-import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.*;
+import javafx.concurrent.ScheduledService;
 import javafx.concurrent.Task;
+import javafx.util.Duration;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -22,7 +23,13 @@ public class AIServer {
     private static AIServer instance;
 
     // Observables
-    private final SimpleStringProperty lastGenerated = new SimpleStringProperty();
+    private final StringProperty lastGenerated = new SimpleStringProperty();
+    private final ObjectProperty<HealthCheckResult> lastHealthCheck = new SimpleObjectProperty<>(
+            new HealthCheckResult(
+                false,
+                false
+            )
+    );
 
     // File locations
     private final Path SERVER_DIR = FileSystems.getDefault().getPath("llm-server", "setup");
@@ -30,6 +37,9 @@ public class AIServer {
             "..", ".venv", "bin", "python"
     );
     private final Path LOG_FILE = FileSystems.getDefault().getPath("llmserver.log");
+
+    // Configuration
+    private final Duration healthCheckPeriod = Duration.seconds(1);
 
     // API paths
     enum APIOperation {
@@ -51,6 +61,7 @@ public class AIServer {
     private Process proc;
     private String host;
     private int port;
+    private ScheduledService<HealthCheckResult> healthMonitor;
 
     // HTTP
     private HttpClient httpClient;
@@ -76,6 +87,9 @@ public class AIServer {
         return instance;
     }
 
+    public ReadOnlyStringProperty lastGeneratedProperty() { return lastGenerated; }
+    public ReadOnlyObjectProperty<HealthCheckResult> lastHealthCheckProperty() { return lastHealthCheck; }
+
     public boolean running() {
         return proc != null && proc.isAlive();
     }
@@ -85,7 +99,7 @@ public class AIServer {
 
         System.getLogger("AIServer").log(
                 System.Logger.Level.INFO,
-                "Starting server at %s:%d. Logs will be directed to %s.".formatted(host, port, LOG_FILE.toString())
+                "Starting AI server at %s:%d. Logs will be directed to %s.".formatted(host, port, LOG_FILE.toString())
         );
 
         this.host = host;
@@ -107,9 +121,37 @@ public class AIServer {
                 .redirectErrorStream(true)
                 .redirectOutput(this.LOG_FILE.toFile())
                 .start();
+
+        // Start health monitor
+        healthMonitor = new ScheduledService<>() {
+            @Override
+            protected Task<HealthCheckResult> createTask() {
+                return new Task<>() {
+                    @Override
+                    protected HealthCheckResult call() {
+                        if (processing) {
+                            // Current processing another request; don't update the value.
+                            return getLastValue();
+                        }
+                        return healthCheck();
+                    }
+                };
+            }
+        };
+        healthMonitor.setPeriod(healthCheckPeriod);
+        lastHealthCheck.bind(healthMonitor.lastValueProperty());
+        healthMonitor.start();
     }
 
-    public ReadOnlyStringProperty lastGeneratedProperty() { return lastGenerated; }
+    public void stopServer() {
+        if (running()) {
+            System.getLogger("AIServer").log(
+                    System.Logger.Level.INFO,
+                    "Stopping AI server at %s:%d. Logs can be found in %s.".formatted(host, port, LOG_FILE.toString())
+            );
+            proc.destroy();
+        }
+    }
 
     private void ensureHttpClient() {
         if (httpClient == null || httpClient.isTerminated()) {
@@ -169,6 +211,44 @@ public class AIServer {
         th.start();
 
         return null;
+    }
+
+    public record HealthCheckResult(boolean middlewareConnected, boolean llamaCppConnected) {
+        public boolean allGood() { return middlewareConnected && llamaCppConnected; }
+    }
+
+    public final HealthCheckResult healthCheck() {
+        if ( !running() ) { return new HealthCheckResult(false, false); }
+
+        ensureHttpClient();
+        ensureNoConcurrentRequest();
+
+        URI target = this.baseUri.resolve(apiSpec.get(APIOperation.HEALTH_CHECK));
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(target)
+                .method("GET", HttpRequest.BodyPublishers.noBody())
+                .header("Accept-Encoding", "application/json")
+                .header("Content-Type", "application/json")
+                .version(HttpClient.Version.HTTP_1_1)
+                .build();
+
+        HttpResponse<String> response;
+        try {
+            response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        } catch (Exception e) {
+            System.getLogger("AIServer.healthCheck").log(
+                    System.Logger.Level.ERROR,
+                    "Middleware server unreachable for health check (%s).".formatted(e)
+            );
+            return new HealthCheckResult(false, false);
+        }
+
+        JSONObject responseBody = new JSONObject(response.body());
+
+        return new HealthCheckResult(
+                responseBody.getString("middleware").equals("ok"),
+                responseBody.getString("llama_server").equals("ok")
+        );
     }
 
     /**
