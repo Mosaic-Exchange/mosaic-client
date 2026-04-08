@@ -8,6 +8,7 @@
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 
@@ -90,6 +91,7 @@
                         maxWidth="Infinity" onAction="#onConfirm" disable="true"/>
                 <Button fx:id="downloadBtn" text="Download" styleClass="btn-secondary"
                         maxWidth="Infinity" onAction="#onDownload" disable="true"/>
+                <ProgressBar fx:id="downloadProgress" maxWidth="Infinity" visible="false"/>
             </VBox>
         </VBox>
     </right>

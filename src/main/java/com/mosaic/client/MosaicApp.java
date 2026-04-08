@@ -2,6 +2,7 @@
 package com.mosaic.client;
 
 import com.mosaic.client.db.DatabaseManager;
+import com.mosaic.client.service.NetworkManager;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
@@ -13,6 +14,21 @@ public class MosaicApp extends Application {
     public void start(Stage primaryStage) throws Exception {
         // Initialize the database (creates tables on first run)
         DatabaseManager.getInstance().initialize();
+
+        AppConfig.writeDefaultIfMissing();
+        AppConfig config = AppConfig.load();
+
+        try {
+            NetworkManager.getInstance().start(
+                    config.port(),
+                    config.nodeType(),
+                    config.debugEnabled(),
+                    config.debugFile(),
+                    config.seedAddresses());
+        } catch (Exception e) {
+            System.err.println("Failed to start network node: " + e.getMessage());
+            // App remains usable for local-only inference
+        }
 
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/MainLayout.fxml"));
         Scene scene = new Scene(loader.load(), 1024, 700);
@@ -29,7 +45,7 @@ public class MosaicApp extends Application {
 
     @Override
     public void stop() {
-        // Clean shutdown of the database connection
+        NetworkManager.getInstance().stop();
         DatabaseManager.getInstance().shutdown();
     }
 

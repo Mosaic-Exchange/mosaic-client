@@ -5,6 +5,7 @@ import com.mosaic.client.db.dao.ChatMessageDao;
 import com.mosaic.client.db.dao.ChatSessionDao;
 import com.mosaic.client.db.model.ChatMessage;
 import com.mosaic.client.db.model.ChatSession;
+import com.mosaic.client.service.NetworkManager;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -22,6 +23,8 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+
+import org.rumor.service.ServiceHandle;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -52,6 +55,9 @@ public class MainWorkspaceController {
 
     /** The currently active session (null when no session is open). */
     private ChatSession currentSession;
+
+    /** Handle for the currently running inference request (null when idle). */
+    private volatile ServiceHandle activeInferenceHandle;
 
     /** Observable list backing the sidebar ListView. */
     private ObservableList<ChatSession> sessionItems;
@@ -148,10 +154,12 @@ public class MainWorkspaceController {
         String text = messageInput.getText().trim();
         if (text.isEmpty()) return;
 
+        // Ignore if an inference is already in progress
+        if (activeInferenceHandle != null) return;
+
         // Create a new session if none is active
         if (currentSession == null) {
             try {
-                // Derive topic from first message (truncated to 100 chars per design doc)
                 String topic = text.length() > 100 ? text.substring(0, 100) : text;
                 currentSession = sessionDao.create(topic);
                 loadSessionList();
@@ -162,10 +170,10 @@ public class MainWorkspaceController {
             }
         }
 
-        // Persist the message to the database
+        // Persist user message
         try {
             String[] expert = Navigator.getActiveExpert();
-            String adapterId = (expert != null) ? expert[3] : null; // adapterFile as ID
+            String adapterId = (expert != null) ? expert[3] : null;
             ChatMessage msg = new ChatMessage(currentSession.getSessionId(), "User", text, adapterId);
             messageDao.create(msg);
         } catch (SQLException e) {
@@ -174,24 +182,113 @@ public class MainWorkspaceController {
 
         appendUserMessage(text);
         messageInput.clear();
+
+        // Dispatch inference and stream tokens into a response bubble
+        runInference(text);
+    }
+
+    /**
+     * Dispatches an inference request and streams tokens into the chat.
+     * Uses local inference if the expert source is "Local", remote otherwise.
+     */
+    private void runInference(String prompt) {
+        NetworkManager net = NetworkManager.getInstance();
+
+        // Create the response bubble and label up front (on FX thread)
+        Label responseLabel = new Label();
+        responseLabel.setWrapText(true);
+        VBox bubble = new VBox(responseLabel);
+        bubble.getStyleClass().add("message-bubble-expert");
+        HBox row = new HBox(bubble);
+        row.setAlignment(Pos.CENTER_LEFT);
+        chatHistory.getChildren().add(row);
+
+        StringBuilder responseText = new StringBuilder();
+
+        String[] expert = Navigator.getActiveExpert();
+        boolean remote = expert != null && "Remote".equals(expert[2]);
+
+        NetworkManager.InferenceCallback callback = new NetworkManager.InferenceCallback() {
+            @Override
+            public void onToken(String token) {
+                // Already on FX thread (NetworkManager uses Platform.runLater)
+                responseText.append(token);
+                responseLabel.setText(responseText.toString());
+            }
+
+            @Override
+            public void onComplete() {
+                activeInferenceHandle = null;
+                persistAssistantMessage(responseText.toString());
+            }
+
+            @Override
+            public void onError(String reason) {
+                activeInferenceHandle = null;
+                if (responseText.isEmpty()) {
+                    responseLabel.setText("[Error: " + reason + "]");
+                } else {
+                    responseLabel.setText(responseText + "\n[Error: " + reason + "]");
+                }
+            }
+
+            @Override
+            public void onCancelled() {
+                activeInferenceHandle = null;
+                if (responseText.isEmpty()) {
+                    responseLabel.setText("[Cancelled]");
+                } else {
+                    responseLabel.setText(responseText + "\n[Cancelled]");
+                }
+            }
+        };
+
+        if (remote) {
+            activeInferenceHandle = net.inferRemote(prompt, callback);
+        } else {
+            activeInferenceHandle = net.inferLocal(prompt, callback);
+        }
+    }
+
+    private void persistAssistantMessage(String content) {
+        if (currentSession == null || content.isEmpty()) return;
+        try {
+            String[] expert = Navigator.getActiveExpert();
+            String adapterId = (expert != null) ? expert[3] : null;
+            ChatMessage msg = new ChatMessage(
+                    currentSession.getSessionId(), "Assistant", content, adapterId);
+            messageDao.create(msg);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     // ── APP-MW-5 (#15): Workspace control handlers ───────────
 
     @FXML
     private void onSwitchExpert() {
+        cancelActiveInference();
         Navigator.showExpertSelection();
     }
 
     @FXML
     private void onOpenSettings() {
+        cancelActiveInference();
         Navigator.showSettings();
+    }
+
+    private void cancelActiveInference() {
+        ServiceHandle h = activeInferenceHandle;
+        if (h != null) {
+            h.cancel();
+            activeInferenceHandle = null;
+        }
     }
 
     @FXML
     private void onClearContext() {
+        cancelActiveInference();
         chatHistory.getChildren().clear();
-        // Clear context only clears the visual display, not the database
     }
 
     @FXML
@@ -204,7 +301,7 @@ public class MainWorkspaceController {
         confirm.showAndWait()
                .filter(btn -> btn == ButtonType.OK)
                .ifPresent(btn -> {
-                   // Delete session from database (cascade deletes messages)
+                   cancelActiveInference();
                    if (currentSession != null) {
                        try {
                            sessionDao.delete(currentSession.getSessionId());

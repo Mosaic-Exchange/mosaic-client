@@ -1,8 +1,7 @@
 [submodule "exchange-server"]
     path = exchange-server
     url = git@github.com:Mosaic-Exchange/exchange-server.git
-    # change to main branch when ready to release
-    branch = dev
+    branch = rumor-1.0
 
 
 [submodule "llm-server"]

@@ -68,13 +68,23 @@
                     <Separator/>
 
                     <HBox alignment="CENTER_LEFT" spacing="12">
+                        <Label text="Status" minWidth="140"/>
+                        <Label fx:id="networkStatusLabel" text="Unknown"/>
+                    </HBox>
+
+                    <HBox alignment="CENTER_LEFT" spacing="12">
                         <Label text="Network mode" minWidth="140"/>
                         <ComboBox fx:id="networkModeCombo" prefWidth="200"/>
                     </HBox>
 
+                    <HBox alignment="CENTER_LEFT" spacing="12">
+                        <Label text="Port" minWidth="140"/>
+                        <TextField fx:id="networkPortField" prefWidth="100" promptText="7000"/>
+                    </HBox>
+
                     <VBox spacing="4">
                         <Label text="Bootstrap nodes"/>
-                        <Label text="One address per line (host:port). Leave empty to use defaults."
+                        <Label text="One address per line or comma-separated (host:port). Leave empty to auto-seed."
                                styleClass="hint-label"/>
                         <TextArea fx:id="bootstrapNodesArea"
                                   prefRowCount="4"

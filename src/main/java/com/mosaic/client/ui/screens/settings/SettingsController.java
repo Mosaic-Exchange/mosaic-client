@@ -4,10 +4,13 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
+import com.mosaic.client.AppConfig;
 import com.mosaic.client.Navigator;
+import com.mosaic.client.service.NetworkManager;
 
 /**
  * Controller for the Settings screen.
@@ -29,6 +32,8 @@ public class SettingsController {
     // ── Network Configuration ────────────────────────────────
     @FXML private ComboBox<String> networkModeCombo;
     @FXML private TextArea         bootstrapNodesArea;
+    @FXML private TextField        networkPortField;
+    @FXML private Label            networkStatusLabel;
 
     // ── Adapter Management ───────────────────────────────────
     @FXML private CheckBox  bluetoothAdapterCheck;
@@ -52,13 +57,30 @@ public class SettingsController {
         ethernetAdapterCheck.setSelected(false);
         customAdapterField.setPromptText("Enter custom adapter name");
 
-        shareAnonymousDataToggle.selectedProperty().addListener((obs, wasSelected, isSelected) -> {
-        shareAnonymousDataToggle.setText(isSelected ? "On" : "Off");
-        });
+        shareAnonymousDataToggle.selectedProperty().addListener((obs, wasSelected, isSelected) ->
+            shareAnonymousDataToggle.setText(isSelected ? "On" : "Off"));
 
-        localOnlyModeToggle.selectedProperty().addListener((obs, wasSelected, isSelected) -> {
-        localOnlyModeToggle.setText(isSelected ? "On" : "Off");
-        });
+        localOnlyModeToggle.selectedProperty().addListener((obs, wasSelected, isSelected) ->
+            localOnlyModeToggle.setText(isSelected ? "On" : "Off"));
+
+        // Network status
+        if (networkPortField != null) {
+            networkPortField.setText("7000");
+            networkPortField.setPromptText("e.g. 7000");
+        }
+        updateNetworkStatus();
+    }
+
+    private void updateNetworkStatus() {
+        if (networkStatusLabel == null) return;
+        NetworkManager net = NetworkManager.getInstance();
+        if (net.isRunning()) {
+            networkStatusLabel.setText("Connected — " + net.localId());
+            networkStatusLabel.setStyle("-fx-text-fill: #4caf50;");
+        } else {
+            networkStatusLabel.setText("Disconnected");
+            networkStatusLabel.setStyle("-fx-text-fill: #f44336;");
+        }
     }
 
     @FXML
@@ -72,12 +94,55 @@ public class SettingsController {
         System.out.println("[Adapter] Wi-Fi                : " + wifiAdapterCheck.isSelected());
         System.out.println("[Adapter] Ethernet             : " + ethernetAdapterCheck.isSelected());
         System.out.println("[Adapter] Custom               : " + customAdapterField.getText().trim());
- 
+
+        // Apply network configuration
+        applyNetworkSettings();
+
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Settings");
         alert.setHeaderText(null);
         alert.setContentText("Settings saved successfully.");
         alert.showAndWait();
+    }
+
+    private void applyNetworkSettings() {
+        NetworkManager net = NetworkManager.getInstance();
+
+        if ("Offline".equals(networkModeCombo.getValue())) {
+            net.stop();
+            updateNetworkStatus();
+            return;
+        }
+
+        int port = 7000;
+        if (networkPortField != null && !networkPortField.getText().isBlank()) {
+            try {
+                port = Integer.parseInt(networkPortField.getText().trim());
+            } catch (NumberFormatException e) {
+                new Alert(Alert.AlertType.ERROR, "Invalid port number.", javafx.scene.control.ButtonType.OK)
+                        .showAndWait();
+                return;
+            }
+        }
+
+        String seedsText = bootstrapNodesArea.getText().trim();
+        String[] seeds = seedsText.isEmpty() ? new String[0] : seedsText.split("[,\\n]+");
+        for (int i = 0; i < seeds.length; i++) {
+            seeds[i] = seeds[i].trim();
+        }
+
+        // Restart with new config (debug file / flag still follow mosaic.yml)
+        net.stop();
+        try {
+            AppConfig cfg = AppConfig.load();
+            String nodeType = seeds.length == 0 ? "master" : "basic";
+            net.start(port, nodeType, cfg.debugEnabled(), cfg.debugFile(), seeds);
+        } catch (Exception e) {
+            new Alert(Alert.AlertType.ERROR, "Failed to start network: " + e.getMessage(),
+                    javafx.scene.control.ButtonType.OK).showAndWait();
+        }
+
+        updateNetworkStatus();
     }
 
     @FXML
