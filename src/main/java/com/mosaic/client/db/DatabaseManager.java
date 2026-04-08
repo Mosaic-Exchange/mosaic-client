@@ -10,11 +10,11 @@ import java.sql.Statement;
 
 /**
  * Manages the SQLite database connection and schema initialization.
- * The database file is stored at {@code <user.home>/.mosaic/mosaic.db}.
+ * The database file is stored at {@code <project>/data/mosaic.db}.
  */
 public class DatabaseManager {
 
-    private static final String DB_DIR = System.getProperty("user.home") + "/.mosaic";
+    private static final String DB_DIR = System.getProperty("user.dir") + "/data";
     private static final String DB_URL = "jdbc:sqlite:" + DB_DIR + "/mosaic.db";
 
     private static DatabaseManager instance;

@@ -141,6 +141,18 @@
     -fx-text-fill: #FFFCF7;
 }
 
+/* Inline rename text field for session topics */
+.session-rename-field {
+    -fx-background-color: #FFFCF7;
+    -fx-text-fill: #1A2C4C;
+    -fx-border-color: #A3C497;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 2 6;
+    -fx-font-size: 13px;
+}
+
 /* Chat outer container */
 .chat-panel { -fx-background-color: #A1B5D8; }
 

@@ -18,8 +18,10 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
@@ -101,10 +103,85 @@ public class MainWorkspaceController {
 
         // ── Session list setup (DB-backed) ───────────────────
         sessionListView.setCellFactory(lv -> new ListCell<>() {
+            private TextField textField;
+
             @Override
             protected void updateItem(ChatSession item, boolean empty) {
                 super.updateItem(item, empty);
-                setText(empty || item == null ? null : item.getTopic());
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                } else if (isEditing()) {
+                    setText(null);
+                    setGraphic(textField);
+                } else {
+                    setText(item.getTopic());
+                    setGraphic(null);
+                }
+            }
+
+            {
+                // Double-click to start editing the session name
+                setOnMouseClicked(event -> {
+                    if (event.getButton() == MouseButton.PRIMARY
+                            && event.getClickCount() == 2
+                            && !isEmpty()) {
+                        startEdit();
+                    }
+                });
+            }
+
+            @Override
+            public void startEdit() {
+                super.startEdit();
+                ChatSession item = getItem();
+                if (item == null) return;
+
+                textField = new TextField(item.getTopic());
+                textField.getStyleClass().add("session-rename-field");
+
+                // Commit on Enter, cancel on Escape
+                textField.setOnKeyPressed(e -> {
+                    if (e.getCode() == KeyCode.ENTER) {
+                        commitRename(item, textField.getText().trim());
+                    } else if (e.getCode() == KeyCode.ESCAPE) {
+                        cancelEdit();
+                    }
+                });
+
+                // Commit on focus lost
+                textField.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
+                    if (!isFocused) {
+                        commitRename(item, textField.getText().trim());
+                    }
+                });
+
+                setText(null);
+                setGraphic(textField);
+                textField.selectAll();
+                textField.requestFocus();
+            }
+
+            @Override
+            public void cancelEdit() {
+                super.cancelEdit();
+                ChatSession item = getItem();
+                setText(item != null ? item.getTopic() : null);
+                setGraphic(null);
+            }
+
+            private void commitRename(ChatSession item, String newName) {
+                if (newName.isEmpty()) {
+                    cancelEdit();
+                    return;
+                }
+                try {
+                    sessionDao.updateTopic(item.getSessionId(), newName);
+                    item.setTopic(newName);
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+                cancelEdit();
             }
         });
 
