@@ -18,15 +18,18 @@ import java.util.Optional;
 
 
 public class AIServer {
+    // Instance
+    private static AIServer instance;
+
     // Observables
     private final SimpleStringProperty lastGenerated = new SimpleStringProperty();
 
-    // Default file locations
-    private final Path DEFAULT_SERVER_DIR = FileSystems.getDefault().getPath("llmserver");
-    private final Path DEFAULT_LOG_FILE = FileSystems.getDefault().getPath("llmserver.log");
-
-    // Base command used to start the server (lacking host/port)
-    private final String BASE_START_COMMAND = "pipenv run python -m uvicorn middleware_server:app";
+    // File locations
+    private final Path SERVER_DIR = FileSystems.getDefault().getPath("llm-server", "setup");
+    private final Path PYTHON_BIN_FROM_SERVER_DIR = FileSystems.getDefault().getPath(
+            "..", ".venv", "bin", "python"
+    );
+    private final Path LOG_FILE = FileSystems.getDefault().getPath("llmserver.log");
 
     // API paths
     enum APIOperation {
@@ -45,7 +48,6 @@ public class AIServer {
     );
 
     // Process management
-    private Path serverDir, logFile;
     private Process proc;
     private String host;
     private int port;
@@ -56,9 +58,22 @@ public class AIServer {
     private int lastId = 0;
     private boolean processing = false;  // Lock on requests
 
-    public AIServer(Optional<Path> serverDir, Optional<Path> logFile) throws URISyntaxException {
-        this.serverDir = serverDir.orElse(DEFAULT_SERVER_DIR);
-        this.logFile = serverDir.orElse(DEFAULT_LOG_FILE);
+    private AIServer() throws URISyntaxException { }
+
+    public static AIServer getInstance() {
+        if (instance == null) {
+            try {
+                instance = new AIServer();
+            } catch (URISyntaxException e) {
+                System.getLogger("AIServer").log(
+                        System.Logger.Level.ERROR,
+                        "API endpoints contain malformed URIs."
+                );
+                e.printStackTrace();
+            }
+        }
+
+        return instance;
     }
 
     public boolean running() {
@@ -68,16 +83,30 @@ public class AIServer {
     public void startServer(String host, int port) throws URISyntaxException, IOException {
         if (running()) { return; }
 
+        System.getLogger("AIServer").log(
+                System.Logger.Level.INFO,
+                "Starting server at %s:%d. Logs will be directed to %s.".formatted(host, port, LOG_FILE.toString())
+        );
+
         this.host = host;
         this.port = port;
         this.baseUri = new URI("http", "", this.host, this.port, "/", "", "");
 
         // Start the process
-//        proc = new ProcessBuilder(BASE_START_COMMAND, "--host", host, "--port", String.valueOf(port))
-//                .directory(this.serverDir.toFile())
-//                .redirectErrorStream(true)
-//                .redirectOutput(this.logFile.toFile())
-//                .start();
+        proc = new ProcessBuilder(
+                PYTHON_BIN_FROM_SERVER_DIR.toString(),
+                "-m",
+                "uvicorn",
+                "middleware_server:app",
+                "--host",
+                host,
+                "--port",
+                String.valueOf(port)
+        )
+                .directory(this.SERVER_DIR.toFile())
+                .redirectErrorStream(true)
+                .redirectOutput(this.LOG_FILE.toFile())
+                .start();
     }
 
     public ReadOnlyStringProperty lastGeneratedProperty() { return lastGenerated; }

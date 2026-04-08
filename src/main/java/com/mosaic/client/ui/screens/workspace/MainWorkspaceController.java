@@ -42,7 +42,7 @@ import java.util.Optional;
 public class MainWorkspaceController {
 
     // AI server
-    AIServer aiServer;
+    private final AIServer aiServer = AIServer.getInstance();
 
     // ── MW-2 fields ──────────────────────────────────────────
     @FXML
@@ -110,7 +110,6 @@ public class MainWorkspaceController {
                              "gardening_expert.gguf", "Connected");
         }
 
-        aiServer = new AIServer(Optional.empty(), Optional.empty());
         aiServer.lastGeneratedProperty().addListener(
                 (observable, oldValue, newValue) -> {
                     if (newValue != null) {
@@ -143,10 +142,6 @@ public class MainWorkspaceController {
         appendUserMessage(text); // AC3: append to chat window
         messageInput.clear();    // AC3: clear the input field
 
-        if (!aiServer.running()) {
-            System.out.println("Start AI server...");
-            aiServer.startServer("127.0.0.1", 4000);
-        }
         aiServer.generateResponse(text, 32);
     }
 
