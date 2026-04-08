@@ -4,6 +4,7 @@ import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import com.mosaic.client.config.AppConfig;
 
 public class MosaicApp extends Application {
 
@@ -19,10 +20,13 @@ public class MosaicApp extends Application {
      */
     @Override
     public void init() throws Exception {
-        String localHost = "127.0.0.1";
-        int    localPort = 7010;
-        String seedHost  = "127.0.0.1";
-        int    seedPort  = 7001;
+        AppConfig config = new AppConfig();
+        config.load();
+
+        String localHost = config.getMyIp();
+        int    localPort = config.getMyPortAsInt();
+        String seedHost  = config.getSeedIp();
+        int    seedPort  = config.getSeedPortAsInt();
 
         boolean available = false;
         try {

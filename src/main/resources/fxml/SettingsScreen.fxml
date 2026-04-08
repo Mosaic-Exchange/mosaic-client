@@ -12,6 +12,9 @@
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleButton?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.text.Text?>
+<?import javafx.scene.layout.GridPane?>
 
 <!--
     Settings screen — structural placeholder.
@@ -27,7 +30,7 @@
                (chosen behaviour: navigate back without saving — document this in PR)
         AC5: No persistence required
 -->
-<BorderPane xmlns:fx="http://javafx.com/fxml/1"
+<BorderPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.mosaic.client.ui.screens.settings.SettingsController"
             styleClass="settings-screen">
 
@@ -71,16 +74,22 @@
                         <Label text="Network mode" minWidth="140"/>
                         <ComboBox fx:id="networkModeCombo" prefWidth="200"/>
                     </HBox>
+                    <!-- 4 network fields in a clean grid -->
+                    <GridPane hgap="12" vgap="10">
+                        <Label text="My IP Address"  GridPane.columnIndex="0" GridPane.rowIndex="0" minWidth="140"/>
+                        <TextField fx:id="myIpField" GridPane.columnIndex="1" GridPane.rowIndex="0" prefWidth="220"/>
 
-                    <VBox spacing="4">
-                        <Label text="Bootstrap nodes"/>
-                        <Label text="One address per line (host:port). Leave empty to use defaults."
-                               styleClass="hint-label"/>
-                        <TextArea fx:id="bootstrapNodesArea"
-                                  prefRowCount="4"
-                                  wrapText="true"/>
-                    </VBox>
+                        <Label text="My Port"         GridPane.columnIndex="0" GridPane.rowIndex="1" minWidth="140"/>
+                        <TextField fx:id="myPortField" GridPane.columnIndex="1" GridPane.rowIndex="1" prefWidth="220"/>
+
+                        <Label text="Seed Node IP"    GridPane.columnIndex="0" GridPane.rowIndex="2" minWidth="140"/>
+                        <TextField fx:id="seedIpField" GridPane.columnIndex="1" GridPane.rowIndex="2" prefWidth="220"/>
+
+                        <Label text="Seed Node Port"    GridPane.columnIndex="0" GridPane.rowIndex="3" minWidth="140"/>
+                        <TextField fx:id="seedPortField" GridPane.columnIndex="1" GridPane.rowIndex="3" prefWidth="220"/>
+                    </GridPane>
                 </VBox>
+
 
                 <!-- ── Section 3: Adapter Management ── -->
                 <VBox spacing="12" styleClass="settings-section">
@@ -104,6 +113,8 @@
 
                 <!-- ── Save / Cancel ── -->
                 <HBox spacing="12" alignment="CENTER_RIGHT">
+                    <Text fx:id="saveConfirmation" visible="false"/>
+                    <Button text="Reset to Defaults" onAction="#onReset" mnemonicParsing="false"/>
                     <Button text="Cancel" onAction="#onCancel" mnemonicParsing="false"/>
                     <Button text="Save"   onAction="#onSave"   mnemonicParsing="false"
                             defaultButton="true"/>
