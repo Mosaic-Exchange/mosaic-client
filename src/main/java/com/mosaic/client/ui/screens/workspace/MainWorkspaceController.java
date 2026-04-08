@@ -69,6 +69,8 @@ public class MainWorkspaceController {
     // ── APP-MW-5 (#15) fields ────────────────────────────────
     @FXML private Button clearContextBtn;
 
+    @FXML private Button sendBtn;
+
     @FXML
     public void initialize() throws URISyntaxException {
         // AC3: Enter sends; Shift+Enter inserts a newline.
@@ -115,6 +117,17 @@ public class MainWorkspaceController {
                     if (newValue != null) {
                         appendExpertMessage(newValue);
                     }
+                }
+        );
+        aiServer.lastHealthCheckProperty().addListener(
+                (observable, oldValue, newValue) -> {
+                    System.out.println(newValue);
+                }
+        );
+        aiServer.stateProperty().addListener(
+                (observable, oldValue, newValue) -> {
+                    messageInput.setDisable(newValue != AIServer.ServerState.CONNECTED);
+                    sendBtn.setDisable(newValue != AIServer.ServerState.CONNECTED);
                 }
         );
     }

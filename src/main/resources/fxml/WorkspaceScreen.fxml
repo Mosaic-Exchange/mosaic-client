@@ -79,9 +79,9 @@
                 <HBox styleClass="input-area" spacing="8" alignment="CENTER">
                     <padding><Insets top="8" right="12" bottom="8" left="12"/></padding>
                     <TextArea fx:id="messageInput" styleClass="message-input"
-                              HBox.hgrow="ALWAYS" prefRowCount="2" wrapText="true"
+                              HBox.hgrow="ALWAYS" prefRowCount="2" wrapText="true" disable="true"
                               promptText="Type a message… (Enter to send, Shift+Enter for new line)"/>
-                    <Button text="Send" styleClass="btn-cta" onAction="#onSend"/>
+                    <Button fx:id="sendBtn" text="Send" styleClass="btn-cta" disable="true" onAction="#onSend"/>
                 </HBox>
             </bottom>
         </BorderPane>
@@ -104,7 +104,7 @@
                 <Label text="Adapter" styleClass="label-muted"/>
                 <Label fx:id="metaAdapterFile" text="gardening_expert.gguf" styleClass="label-body" wrapText="true"/>
                 <Label text="Status" styleClass="label-muted"/>
-                <Label fx:id="metaExpertStatus" text="Connected" styleClass="expert-status-connected"/>
+                <Label fx:id="metaExpertStatus" text="Disconnected" styleClass="expert-status-disconnected"/>
             </VBox>
 
             <!-- Spacer pushes controls to the bottom -->

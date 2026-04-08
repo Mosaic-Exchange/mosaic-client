@@ -19,6 +19,12 @@ import java.util.Optional;
 
 
 public class AIServer {
+    public enum ServerState {
+        CONNECTING,
+        CONNECTED,
+        DISCONNECTED
+    }
+
     // Instance
     private static AIServer instance;
 
@@ -27,9 +33,11 @@ public class AIServer {
     private final ObjectProperty<HealthCheckResult> lastHealthCheck = new SimpleObjectProperty<>(
             new HealthCheckResult(
                 false,
-                false
+                false,
+                Optional.empty()
             )
     );
+    private final ObjectProperty<ServerState> state = new SimpleObjectProperty<>(ServerState.DISCONNECTED);
 
     // File locations
     private final Path SERVER_DIR = FileSystems.getDefault().getPath("llm-server", "setup");
@@ -89,6 +97,7 @@ public class AIServer {
 
     public ReadOnlyStringProperty lastGeneratedProperty() { return lastGenerated; }
     public ReadOnlyObjectProperty<HealthCheckResult> lastHealthCheckProperty() { return lastHealthCheck; }
+    public ReadOnlyObjectProperty<ServerState> stateProperty() { return state; }
 
     public boolean running() {
         return proc != null && proc.isAlive();
@@ -96,6 +105,8 @@ public class AIServer {
 
     public void startServer(String host, int port) throws URISyntaxException, IOException {
         if (running()) { return; }
+
+        state.setValue(ServerState.CONNECTING);
 
         System.getLogger("AIServer").log(
                 System.Logger.Level.INFO,
@@ -139,6 +150,15 @@ public class AIServer {
             }
         };
         healthMonitor.setPeriod(healthCheckPeriod);
+        healthMonitor.lastValueProperty().addListener(
+            (observable, oldValue, newValue) -> {
+                if (newValue.allGood()) {
+                    state.setValue(ServerState.CONNECTED);
+                } else if (newValue.error.isPresent() && state.get() == ServerState.CONNECTED) {
+                    state.setValue(ServerState.DISCONNECTED);
+                }
+            }
+        );
         lastHealthCheck.bind(healthMonitor.lastValueProperty());
         healthMonitor.start();
     }
@@ -213,12 +233,18 @@ public class AIServer {
         return null;
     }
 
-    public record HealthCheckResult(boolean middlewareConnected, boolean llamaCppConnected) {
-        public boolean allGood() { return middlewareConnected && llamaCppConnected; }
+    public record HealthCheckResult(
+            boolean middlewareConnected,
+            boolean llamaCppConnected,
+            Optional<Exception> error
+    ) {
+        public boolean allGood() { return middlewareConnected && llamaCppConnected && error.isEmpty(); }
     }
 
     public final HealthCheckResult healthCheck() {
-        if ( !running() ) { return new HealthCheckResult(false, false); }
+        if ( !running() ) {
+            return new HealthCheckResult(false, false, Optional.empty());
+        }
 
         ensureHttpClient();
         ensureNoConcurrentRequest();
@@ -240,14 +266,15 @@ public class AIServer {
                     System.Logger.Level.ERROR,
                     "Middleware server unreachable for health check (%s).".formatted(e)
             );
-            return new HealthCheckResult(false, false);
+            return new HealthCheckResult(false, false, Optional.of(e));
         }
 
         JSONObject responseBody = new JSONObject(response.body());
 
         return new HealthCheckResult(
                 responseBody.getString("middleware").equals("ok"),
-                responseBody.getString("llama_server").equals("ok")
+                responseBody.getString("llama_server").equals("ok"),
+                Optional.empty()
         );
     }
 
