@@ -2,7 +2,6 @@ package com.mosaic.client.db;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -10,12 +9,9 @@ import java.sql.Statement;
 
 /**
  * Manages the SQLite database connection and schema initialization.
- * The database file is stored at {@code <user.home>/.mosaic/mosaic.db}.
+ * The database file is stored at {@code <dataDir>/mosaic.db}.
  */
 public class DatabaseManager {
-
-    private static final String DB_DIR = System.getProperty("user.home") + "/.mosaic";
-    private static final String DB_URL = "jdbc:sqlite:" + DB_DIR + "/mosaic.db";
 
     private static DatabaseManager instance;
     private Connection connection;
@@ -31,18 +27,20 @@ public class DatabaseManager {
 
     /**
      * Opens the database connection and creates tables if they do not exist.
+     *
+     * @param mosaicDir directory where {@code mosaic.db} will be stored
      */
-    public void initialize() throws SQLException {
+    public void initialize(Path mosaicDir) throws SQLException {
         try {
-            Path dir = Paths.get(DB_DIR);
-            if (!Files.exists(dir)) {
-                Files.createDirectories(dir);
+            if (!Files.exists(mosaicDir)) {
+                Files.createDirectories(mosaicDir);
             }
         } catch (Exception e) {
             throw new SQLException("Failed to create database directory: " + e.getMessage(), e);
         }
 
-        connection = DriverManager.getConnection(DB_URL);
+        String dbUrl = "jdbc:sqlite:" + mosaicDir.resolve("mosaic.db");
+        connection = DriverManager.getConnection(dbUrl);
         connection.setAutoCommit(true);
 
         // Enable WAL mode for better concurrent read performance

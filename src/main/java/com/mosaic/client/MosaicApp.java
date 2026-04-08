@@ -12,11 +12,11 @@ public class MosaicApp extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        // Initialize the database (creates tables on first run)
-        DatabaseManager.getInstance().initialize();
-
         AppConfig.writeDefaultIfMissing();
         AppConfig config = AppConfig.load();
+
+        // Initialize the database (creates tables on first run)
+        DatabaseManager.getInstance().initialize(config.dataDir());
 
         try {
             NetworkManager.getInstance().start(
@@ -24,6 +24,7 @@ public class MosaicApp extends Application {
                     config.nodeType(),
                     config.debugEnabled(),
                     config.debugFile(),
+                    config.dataDir(),
                     config.seedAddresses());
         } catch (Exception e) {
             System.err.println("Failed to start network node: " + e.getMessage());

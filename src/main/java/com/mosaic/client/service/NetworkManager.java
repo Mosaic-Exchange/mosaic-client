@@ -27,15 +27,13 @@ import java.util.Map;
  */
 public class NetworkManager {
 
-    private static final Path ADAPTERS_DIR =
-            Path.of(System.getProperty("user.home"), ".mosaic", "adapters");
-
     private static NetworkManager instance;
 
     private Rumor rumor;
     private InferenceService inferenceService;
     private AdapterTransferService adapterTransferService;
     private volatile boolean running;
+    private Path adaptersDir;
 
     private NetworkManager() {}
 
@@ -53,13 +51,15 @@ public class NetworkManager {
      * @param nodeType     node type string ("master", "basic", "seed", "eviction")
      * @param debugEnabled whether to write periodic debug snapshots
      * @param debugFile    path for the debug snapshot file (ignored if debug disabled)
+     * @param mosaicDir    root data directory; adapters are stored in a subdirectory
      * @param seeds        seed addresses as "host:port" strings; may be empty
      */
     public void start(int port, String nodeType, boolean debugEnabled,
-                      String debugFile, String... seeds) throws Exception {
+                      String debugFile, Path mosaicDir, String... seeds) throws Exception {
         if (running) return;
 
-        Files.createDirectories(ADAPTERS_DIR);
+        adaptersDir = mosaicDir.resolve("adapters");
+        Files.createDirectories(adaptersDir);
 
         RumorConfig config = new RumorConfig();
         config.port(port).nodeType(NodeType.fromString(nodeType));
@@ -73,17 +73,17 @@ public class NetworkManager {
         rumor = new Rumor(config);
 
         inferenceService = new InferenceService();
-        adapterTransferService = new AdapterTransferService(ADAPTERS_DIR);
+        adapterTransferService = new AdapterTransferService(adaptersDir);
 
         rumor.register(inferenceService, new DistributedService.Config()
                 .remoteThreads(2)
-                .remoteQueueCapacity(2)
+                .remoteQueueCapacity(1)
                 .localThreads(2)
                 .localQueueCapacity(2));
 
         rumor.register(adapterTransferService, new DistributedService.Config()
                 .remoteThreads(2)
-                .remoteQueueCapacity(2));
+                .remoteQueueCapacity(1));
 
         if (debugEnabled && debugFile != null && !debugFile.isBlank()) {
             rumor.registerDebug(Path.of(debugFile));
@@ -96,8 +96,8 @@ public class NetworkManager {
     /**
      * Convenience overload for callers that don't need debug (e.g. Settings restart).
      */
-    public void start(int port, String nodeType, String... seeds) throws Exception {
-        start(port, nodeType, false, null, seeds);
+    public void start(int port, String nodeType, Path mosaicDir, String... seeds) throws Exception {
+        start(port, nodeType, false, null, mosaicDir, seeds);
     }
 
     /**
@@ -224,10 +224,10 @@ public class NetworkManager {
             return null;
         }
 
-        Path outputPath = ADAPTERS_DIR.resolve(adapterName).toAbsolutePath().normalize();
+        Path outputPath = adaptersDir.resolve(adapterName).toAbsolutePath().normalize();
 
         // Path traversal guard
-        if (!outputPath.startsWith(ADAPTERS_DIR)) {
+        if (!outputPath.startsWith(adaptersDir)) {
             Platform.runLater(() -> callback.onError("Invalid adapter name"));
             return null;
         }
@@ -288,7 +288,7 @@ public class NetworkManager {
     }
 
     public Path getAdaptersDir() {
-        return ADAPTERS_DIR;
+        return adaptersDir;
     }
 
     // -- Utilities --

@@ -1,0 +1,20 @@
+We basically need to integrate the llm-server into the main app 
+now. @llm-server/SETUP.md  For this we also need to add ui for 
+adding new experts from the ui. Also we need to make sure that
+we advertize the latest adapter that is currently loaded into the 
+llm-server. When node makes a local request to a different adapter 
+than all running or queued requests for a different adapter must be
+cancelled. 
+
+Probels with llm-serever integration:-
+we need a way to cancel a running request with the server- either steraming
+or non streaming. Otherwise if a a remote request was runnong for adapter B
+and user made a lcoal request for adapter B then user has to for the server
+to hot swap the adapter which can only happen after the remote request is done.
+Therefore we need a way to cancel request made to ai server.
+
+Tomorrow:-
+1. Add a new button for remote inference. 
+2. Add ui to add custom adapters and demo the transfer
+3. when the same adapter is offered by the netwrok its status
+says remote instead it should be local,

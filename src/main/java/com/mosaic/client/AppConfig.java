@@ -21,6 +21,7 @@ public class AppConfig {
     private String seed = "";
     private String debugFile = "mosaic-debug.txt";
     private boolean debugEnabled = false;
+    private String dataDir = System.getProperty("user.home") + "/.mosaic";
 
     private AppConfig() {}
 
@@ -95,12 +96,14 @@ public class AppConfig {
                     case "seed"          -> config.seed = value;
                     case "debug-file"    -> config.debugFile = value;
                     case "debug-enabled" -> config.debugEnabled = parseBoolean(value);
+                    case "data-dir"      -> config.dataDir = value;
                 }
             }
             System.out.println("[config] Loaded mosaic.yml — port=" + config.port
                     + " type=" + config.nodeType
                     + " seed=" + (config.seed.isEmpty() ? "(none)" : config.seed)
-                    + " debug=" + config.debugEnabled);
+                    + " debug=" + config.debugEnabled
+                    + " data-dir=" + config.dataDir);
         } catch (IOException e) {
             System.err.println("[config] Failed to read mosaic.yml: " + e.getMessage());
         }
@@ -135,6 +138,9 @@ public class AppConfig {
 
                 # Set to true to enable periodic debug snapshots
                 debug-enabled: false
+
+                # Directory used to store the database and adapters (default: ~/.mosaic)
+                # data-dir: /path/to/custom/dir
                 """;
         try {
             Files.writeString(path, content);
@@ -147,11 +153,12 @@ public class AppConfig {
 
     // -- Accessors --
 
-    public int port()           { return port; }
-    public String nodeType()    { return nodeType; }
-    public String seed()        { return seed; }
-    public String debugFile()   { return debugFile; }
+    public int port()             { return port; }
+    public String nodeType()      { return nodeType; }
+    public String seed()          { return seed; }
+    public String debugFile()     { return debugFile; }
     public boolean debugEnabled() { return debugEnabled; }
+    public Path dataDir()         { return Path.of(dataDir); }
 
     // -- Parse helpers --
 

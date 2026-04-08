@@ -136,7 +136,7 @@ public class SettingsController {
         try {
             AppConfig cfg = AppConfig.load();
             String nodeType = seeds.length == 0 ? "master" : "basic";
-            net.start(port, nodeType, cfg.debugEnabled(), cfg.debugFile(), seeds);
+            net.start(port, nodeType, cfg.debugEnabled(), cfg.debugFile(), cfg.dataDir(), seeds);
         } catch (Exception e) {
             new Alert(Alert.AlertType.ERROR, "Failed to start network: " + e.getMessage(),
                     javafx.scene.control.ButtonType.OK).showAndWait();

@@ -1,0 +1,23 @@
+=== Rumor Debug Snapshot ===
+Generated: 2026-04-08T19:01:02.035998752Z
+Node:      127.0.0.1:7001
+Uptime:    0h 2m 26s
+
+--- Requests ---
+Pending outbound:      0
+Active streams (svr):  1
+Pending handshakes:    0
+
+--- Executors ---
+Service: InferenceService
+  Remote: active=1 pool=1/2 queue=0 completed=0
+  Local : active=0 pool=0/2 queue=0 completed=0
+Service: AdapterTransferService
+  Remote: active=0 pool=0/2 queue=0 completed=0
+  Local : active=0 pool=0/2 queue=0 completed=0
+
+--- Cluster (2 nodes) ---
+NODE                      TYPE     STATUS     HEARTBEAT  APP STATE
+--------------------------------------------------------------------------------
+127.0.0.1:7000            MASTER   ALIVE      178        SERVICES=InferenceService,AdapterTransferService, AdapterTransferService.ADAPTERS=master-abc.adp:9
+127.0.0.1:7001            BASIC    ALIVE      145        SERVICES=InferenceService,AdapterTransferService, AdapterTransferService.ADAPTERS=node1-abc.adp:4308400862 (self)
