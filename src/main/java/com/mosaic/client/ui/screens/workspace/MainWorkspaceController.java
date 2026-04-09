@@ -253,7 +253,7 @@ public class MainWorkspaceController {
             e.printStackTrace();
         }
 
-        appendUserMessage(text);
+        addUserMessage(text);
         messageInput.clear();
     }
 
@@ -298,23 +298,6 @@ public class MainWorkspaceController {
                    messageInput.clear();
                    loadSessionList();
                });
-    }
-
-    // ── Helpers ──────────────────────────────────────────────
-
-    private void appendUserMessage(String text) {
-        HBox row = new HBox();
-        row.setAlignment(Pos.CENTER_RIGHT);
-
-        VBox bubble = new VBox();
-        bubble.getStyleClass().add("message-bubble-user");
-
-        Label label = new Label(text);
-        label.setWrapText(true);
-        bubble.getChildren().add(label);
-
-        row.getChildren().add(bubble);
-        chatHistory.getChildren().add(row);
     }
 
     /**
