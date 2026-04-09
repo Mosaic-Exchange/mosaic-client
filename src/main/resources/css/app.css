@@ -201,6 +201,10 @@
     -fx-border-color: #8BA3C4;
     -fx-border-width: 1 0 0 0;
 }
+.input-area:disabled {
+    -fx-background-color: #dad9d1;
+    -fx-border-color: #c5c5c5;
+}
 
 /* Right expert panel — blends with background, left border */
 .expert-panel {
@@ -286,6 +290,10 @@
     -fx-cursor: hand;
 }
 .btn-cta:hover { -fx-background-color: #A3C497; }
+.btn-cta:disabled {
+    -fx-background-color: #d8dfcb;
+    -fx-text-fill: #3e434c;
+}
 
 /* Label hierarchy */
 .label-title {
@@ -369,6 +377,13 @@
 }
 
 /* ── Expert metadata panel (APP-MW-4, #14) ──────────────── */
+
+/* Status badge — connecting (black) */
+.expert-status-connecting {
+    -fx-text-fill: #000000;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
 
 /* Status badge — connected (green) */
 .expert-status-connected {

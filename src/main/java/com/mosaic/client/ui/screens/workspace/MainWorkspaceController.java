@@ -1,5 +1,6 @@
 package com.mosaic.client.ui.screens.workspace;
 
+import com.mosaic.client.AIServer;
 import com.mosaic.client.Navigator;
 import com.mosaic.client.db.dao.ChatMessageDao;
 import com.mosaic.client.db.dao.ChatSessionDao;
@@ -29,6 +30,7 @@ import java.util.Optional;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.net.URISyntaxException;
 
 /**
  * Controller for the Main Workspace screen.
@@ -49,6 +51,9 @@ import java.util.List;
  *                    wire End Session (confirmation dialog, then clear).        — DONE
  */
 public class MainWorkspaceController {
+
+    // AI server
+    private final AIServer aiServer = AIServer.getInstance();
 
     // ── DAOs ─────────────────────────────────────────────────
     private final ChatSessionDao sessionDao = new ChatSessionDao();
@@ -85,8 +90,10 @@ public class MainWorkspaceController {
     // ── APP-MW-5 (#15) fields ────────────────────────────────
     @FXML private Button clearContextBtn;
 
+    @FXML private Button sendBtn;
+
     @FXML
-    public void initialize() {
+    public void initialize() throws URISyntaxException {
         // AC3: Enter sends; Shift+Enter inserts a newline.
         messageInput.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ENTER) {
@@ -207,6 +214,25 @@ public class MainWorkspaceController {
             loadActiveExpert("Gardening Expert", "Gardening", "Local",
                              "gardening_expert.gguf", "Connected");
         }
+
+        aiServer.lastGeneratedProperty().addListener(
+                (observable, oldValue, newValue) -> {
+                    if (newValue != null) {
+                        addExpertMessage(newValue);
+                    }
+                }
+        );
+        aiServer.lastHealthCheckProperty().addListener(
+                (observable, oldValue, newValue) -> {
+                    System.out.println(newValue);
+                }
+        );
+        aiServer.stateProperty().addListener(
+                (observable, oldValue, newValue) -> {
+                    messageInput.setDisable(newValue != AIServer.ServerState.CONNECTED);
+                    sendBtn.setDisable(newValue != AIServer.ServerState.CONNECTED);
+                }
+        );
     }
 
     // ── APP-MW-4 (#14): Expert metadata helpers ──────────────
@@ -253,8 +279,10 @@ public class MainWorkspaceController {
             e.printStackTrace();
         }
 
-        appendUserMessage(text);
-        messageInput.clear();
+        addUserMessage(text); // AC3: append to chat window
+        messageInput.clear();    // AC3: clear the input field
+
+        aiServer.generateResponse(text, 32);
     }
 
     // ── APP-MW-5 (#15): Workspace control handlers ───────────
@@ -301,21 +329,6 @@ public class MainWorkspaceController {
     }
 
     // ── Helpers ──────────────────────────────────────────────
-
-    private void appendUserMessage(String text) {
-        HBox row = new HBox();
-        row.setAlignment(Pos.CENTER_RIGHT);
-
-        VBox bubble = new VBox();
-        bubble.getStyleClass().add("message-bubble-user");
-
-        Label label = new Label(text);
-        label.setWrapText(true);
-        bubble.getChildren().add(label);
-
-        row.getChildren().add(bubble);
-        chatHistory.getChildren().add(row);
-    }
 
     /**
      * Loads messages from the database for the given session and displays them.

@@ -1,4 +1,3 @@
-
 package com.mosaic.client;
 
 import com.mosaic.client.db.DatabaseManager;
@@ -28,9 +27,11 @@ public class MosaicApp extends Application {
     }
 
     @Override
-    public void stop() {
+    public void stop() throws Exception {
         // Clean shutdown of the database connection
         DatabaseManager.getInstance().shutdown();
+        AIServer.getInstance().stopServer();
+        super.stop();
     }
 
     public static void main(String[] args) {
