@@ -13,17 +13,27 @@ public class SplashController {
     private void onGetStarted() {
         if (started) { return; }
 
-        // Start the AI server
-        try {
-            AIServer.getInstance().startServer("127.0.0.1", 4000);
-            started = true;
-        } catch (Exception e) {
+        boolean frontendOnly = Boolean.getBoolean("mosaic.frontendOnly");
+
+        if (frontendOnly) {
+            // Frontend-only mode: skip LLM server startup
             System.getLogger("SplashController").log(
-                    System.Logger.Level.ERROR,
-                    "Starting the server produced an error. Details:"
+                    System.Logger.Level.INFO,
+                    "Running in frontend-only mode. LLM server will not be started."
             );
-            e.printStackTrace();
-            // TODO: display some error to the user
+            started = true;
+        } else {
+            // Start the AI server
+            try {
+                AIServer.getInstance().startServer("127.0.0.1", 4000);
+                started = true;
+            } catch (Exception e) {
+                System.getLogger("SplashController").log(
+                        System.Logger.Level.ERROR,
+                        "Starting the server produced an error. Details:"
+                );
+                e.printStackTrace();
+            }
         }
 
         if (started) {
