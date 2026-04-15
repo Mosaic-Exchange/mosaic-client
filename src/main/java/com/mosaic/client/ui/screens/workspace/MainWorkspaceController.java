@@ -227,12 +227,17 @@ public class MainWorkspaceController {
                     System.out.println(newValue);
                 }
         );
-        aiServer.stateProperty().addListener(
-                (observable, oldValue, newValue) -> {
-                    messageInput.setDisable(newValue != AIServer.ServerState.CONNECTED);
-                    sendBtn.setDisable(newValue != AIServer.ServerState.CONNECTED);
-                }
-        );
+        if (Boolean.getBoolean("mosaic.frontendOnly")) {
+            messageInput.setDisable(false);
+            sendBtn.setDisable(false);
+        } else {
+            aiServer.stateProperty().addListener(
+                    (observable, oldValue, newValue) -> {
+                        messageInput.setDisable(newValue != AIServer.ServerState.CONNECTED);
+                        sendBtn.setDisable(newValue != AIServer.ServerState.CONNECTED);
+                    }
+            );
+        }
     }
 
     // ── APP-MW-4 (#14): Expert metadata helpers ──────────────
@@ -282,7 +287,9 @@ public class MainWorkspaceController {
         addUserMessage(text); // AC3: append to chat window
         messageInput.clear();    // AC3: clear the input field
 
-        aiServer.generateResponse(text, 32);
+        if (!Boolean.getBoolean("mosaic.frontendOnly")) {
+            aiServer.generateResponse(text, 32);
+        }
     }
 
     // ── APP-MW-5 (#15): Workspace control handlers ───────────
