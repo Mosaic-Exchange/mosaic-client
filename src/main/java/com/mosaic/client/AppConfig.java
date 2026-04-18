@@ -1,11 +1,16 @@
 package com.mosaic.client;
 
-import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.DumperOptions;
 
 /**
  * Application configuration loaded from a YAML-style file ({@code mosaic.yml})
@@ -105,39 +110,38 @@ public class AppConfig {
             return config;
         }
 
-        try {
-            List<String> lines = Files.readAllLines(path);
-            for (String raw : lines) {
-                String line = raw.trim();
-                if (line.isEmpty() || line.startsWith("#")) continue;
-
-                int colon = line.indexOf(':');
-                if (colon < 0) continue;
-
-                String key = line.substring(0, colon).trim().toLowerCase();
-                String value = line.substring(colon + 1).trim();
-
-                switch (key) {
-                    case "port"            -> config.port = parsePort(value);
-                    case "llm-server-port" -> config.llmServerPort = parsePort(value);
-                    case "node-type"       -> config.nodeType = value;
-                    case "seed"            -> config.seed = value;
-                    case "debug-file"      -> config.debugFile = value;
-                    case "debug-enabled"   -> config.debugEnabled = parseBoolean(value);
-                    case "data-dir"        -> config.dataDir = value;
-                }
+        try (InputStream inputStream = Files.newInputStream(path)) {
+            Yaml yaml = new Yaml();
+            Map<String, Object> data = yaml.load(inputStream);
+            if (data != null) {
+                if (data.containsKey("port")) config.port = toInt(data.get("port"), config.port);
+                if (data.containsKey("llm-server-port")) config.llmServerPort = toInt(data.get("llm-server-port"), config.llmServerPort);
+                if (data.containsKey("node-type")) config.nodeType = String.valueOf(data.get("node-type"));
+                if (data.containsKey("seed")) config.seed = data.get("seed") != null ? String.valueOf(data.get("seed")) : "";
+                if (data.containsKey("debug-file")) config.debugFile = String.valueOf(data.get("debug-file"));
+                if (data.containsKey("debug-enabled")) config.debugEnabled = Boolean.parseBoolean(String.valueOf(data.get("debug-enabled")));
+                if (data.containsKey("data-dir")) config.dataDir = String.valueOf(data.get("data-dir"));
             }
             System.out.println("[config] Loaded " + filename + " — port=" + config.port
                     + " llm-port=" + config.llmServerPort
                     + " type=" + config.nodeType
-                    + " seed=" + (config.seed.isEmpty() ? "(none)" : config.seed)
+                    + " seed=" + (config.seed != null && !config.seed.isEmpty() ? config.seed : "(none)")
                     + " debug=" + config.debugEnabled
                     + " data-dir=" + config.dataDir);
-        } catch (IOException e) {
+        } catch (Exception e) {
             System.err.println("[config] Failed to read " + filename + ": " + e.getMessage());
         }
 
         return config;
+    }
+
+    private static int toInt(Object obj, int defaultValue) {
+        if (obj instanceof Number) return ((Number) obj).intValue();
+        try {
+            return Integer.parseInt(String.valueOf(obj));
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
     }
 
     /**
@@ -149,6 +153,41 @@ public class AppConfig {
     }
 
     /**
+     * Writes the current configuration to a file under {@link #appHome()}.
+     * @param filename Configuration file name (e.g. {@code mosaic.yml})
+     */
+    public void save(String filename) {
+        Path path = configPath(filename);
+        Map<String, Object> data = new HashMap<>();
+        data.put("port", port);
+        data.put("llm-server-port", llmServerPort);
+        data.put("node-type", nodeType);
+        data.put("seed", seed);
+        data.put("debug-file", debugFile);
+        data.put("debug-enabled", debugEnabled);
+        data.put("data-dir", dataDir);
+
+        DumperOptions options = new DumperOptions();
+        options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
+        options.setPrettyFlow(true);
+        Yaml yaml = new Yaml(options);
+
+        try (OutputStream outputStream = Files.newOutputStream(path)) {
+            yaml.dump(data, new java.io.OutputStreamWriter(outputStream));
+            System.out.println("[config] Saved " + filename);
+        } catch (Exception e) {
+            System.err.println("[config] Could not save " + filename + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Writes the current configuration to the active configuration file.
+     */
+    public void save() {
+        save(getActiveConfigFilename());
+    }
+
+    /**
      * Writes a default config file if none exists. Called once at startup
      * so the user always has a reference to edit.
      * @param filename Configuration file name (e.g. {@code mosaic.yml})
@@ -157,39 +196,9 @@ public class AppConfig {
         Path path = configPath(filename);
         if (Files.exists(path)) return;
 
-                String content = """
-                # Mosaic configuration
-                # Lives next to the runnable jar (or project root in dev).
-
-                # Network port this node listens on
-                port: 7000
-
-                # Network port for the local LLM server (middleware)
-                llm-server-port: 4000
-
-                # Node type: basic | seed | eviction | master
-                node-type: basic
-
-                # Seed node to bootstrap into the cluster (host:port)
-                # Leave empty to start as a standalone node.
-                seed:
-
-                # Debug snapshot file (written periodically while running)
-                debug-file: mosaic-debug.txt
-
-                # Set to true to enable periodic debug snapshots
-                debug-enabled: false
-
-                # Directory used to store the database and adapters (default: ~/.mosaic)
-                # data-dir: /path/to/custom/dir
-                """;
-        try {
-            Files.writeString(path, content);
-            System.out.println("[config] Created default " + filename);
-        } catch (IOException e) {
-            // Non-fatal — the app works fine without the file
-            System.err.println("[config] Could not write default " + filename + ": " + e.getMessage());
-        }
+        AppConfig config = new AppConfig();
+        config.save(filename);
+        System.out.println("[config] Created default " + filename);
     }
 
     /**
