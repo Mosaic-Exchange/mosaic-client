@@ -4,13 +4,36 @@ Mosaic is a desktop chatbot client built with JavaFX 21. Users can select an AI 
 
 ## How to run
 
-Requires Java 21 and Maven 3.8+.
+Requires Java 21 and Maven 3.8+ for the client.
+
+If you want to run the client with the local LLM backend, first set up the bundled `llm-server` by following `llm-server/SETUP.md`.
+
+### Run With Backend
+
+Start the backend from the `mosaic-client` repo root in one terminal:
 
 ```bash
-mvn clean javafx:run
+cd llm-server/setup
+python -m uvicorn middleware_server:app --host 127.0.0.1 --port 4000
+```
+
+This starts the middleware on `127.0.0.1:4000`. On startup it will also launch `llama-server` on port `8080` if needed.
+
+Then start the JavaFX client from the `mosaic-client` repo root in a second terminal:
+
+```bash
+mvn clean javafx:run@run
 ```
 
 The app launches with a splash screen. Clicking **Get Started** navigates to the Main Workspace.
+
+### Frontend-Only Testing
+
+If you only want to run the UI without starting the local backend, use:
+
+```bash
+mvn clean javafx:run@run-frontend
+```
 
 ## Project structure
 
