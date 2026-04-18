@@ -2,9 +2,9 @@
 # Build the Mosaic client fat JAR for the host OS, remove any previous jar from target/,
 # and add a demo mosaic.yml in target/ when none exists yet.
 
-# Optional: ./build.sh [javafx-platform] [extra mvn args...]
+# Optional: ./build.sh [--debug] [javafx-platform] [extra mvn args...]
 #   Platform: linux | linux-aarch64 | win | win-x86 | mac | mac-aarch64
-# Optional env: MAVEN=mvn  QUIET=1  JAVAFX_PLATFORM=...
+# Optional env: MAVEN=mvn  QUIET=1  JAVAFX_PLATFORM=...  DEBUG=1
 
 set -euo pipefail
 
@@ -15,6 +15,15 @@ MAVEN="${MAVEN:-mvn}"
 MVN_EXTRA=()
 if [[ "${QUIET:-}" == "1" ]]; then
   MVN_EXTRA+=(-q)
+fi
+
+if [[ "${1:-}" == "--debug" ]]; then
+  DEBUG=1
+  shift
+fi
+
+if [[ "${DEBUG:-}" == "1" ]]; then
+  MVN_EXTRA+=(-Ddebug=true)
 fi
 
 JAR="${ROOT}/target/mosaic-client-1.0-SNAPSHOT.jar"
