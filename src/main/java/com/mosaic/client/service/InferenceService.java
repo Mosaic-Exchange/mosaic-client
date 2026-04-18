@@ -1,15 +1,18 @@
 package com.mosaic.client.service;
 
+import org.json.JSONObject;
 import org.rumor.service.DistributedService;
 import org.rumor.service.ServiceRequest;
 import org.rumor.service.ServiceResponse;
 import org.rumor.service.Streamable;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.stream.Stream;
 
 /**
@@ -23,16 +26,34 @@ import java.util.stream.Stream;
 @Streamable
 public class InferenceService extends DistributedService<InferenceRequest, byte[]> {
 
-    private final String endpoint;
+    private final URI endpoint;
     private final String defaultModel;
     private final HttpClient httpClient;
 
-    public InferenceService() {
-        this("http://localhost:11434", "llama3.2");
+    // API paths
+    enum APIOperation {
+        GENERATE,
+        GENERATE_STREAM,
+        ADD_ADAPTER,
+        LIST_ADAPTERS,
+        REMOVE_ADAPTER,
+        HEALTH_CHECK
+    }
+    private final Map<APIOperation, URI> apiSpec = Map.of(
+            APIOperation.GENERATE, new URI("v1/generations"),
+            APIOperation.GENERATE_STREAM, new URI("v1/generations/stream"),
+            APIOperation.ADD_ADAPTER, new URI("v1/adapters"),
+            APIOperation.LIST_ADAPTERS, new URI("v1/adapters"),
+            APIOperation.REMOVE_ADAPTER, new URI("v1/adapters"),
+            APIOperation.HEALTH_CHECK, new URI("health")
+    );
+
+    public InferenceService() throws URISyntaxException {
+        this("http://127.0.0.1:4000", "");
     }
 
-    public InferenceService(String endpoint, String defaultModel) {
-        this.endpoint = endpoint;
+    public InferenceService(String endpoint, String defaultModel) throws URISyntaxException {
+        this.endpoint = new URI(endpoint);
         this.defaultModel = defaultModel;
         this.httpClient = HttpClient.newHttpClient();
     }
@@ -40,25 +61,28 @@ public class InferenceService extends DistributedService<InferenceRequest, byte[
     @Override
     public void serve(ServiceRequest<InferenceRequest> request, ServiceResponse<byte[]> response) {
         InferenceRequest req = request.data();
-        String model = req.model() != null ? req.model() : defaultModel;
 
-        String json = buildRequestJson(model, req);
+        JSONObject requestBody = new JSONObject();
+        requestBody.put("request_id", String.valueOf(req.request_id()));
+        requestBody.put("message", req.message());
+        if (req.maxOutputTokens() > 0) { requestBody.put("max_tokens", req.maxOutputTokens()); }
+//        adapterId.ifPresent(s -> requestBody.put("adapter_id", s));
 
-        HttpRequest httpReq = HttpRequest.newBuilder()
-                .uri(URI.create(endpoint + "/api/generate"))
+        URI target = this.endpoint.resolve(apiSpec.get(APIOperation.GENERATE_STREAM));
+        HttpRequest httpReq= HttpRequest.newBuilder()
+                .uri(target)
+                .method("POST", HttpRequest.BodyPublishers.ofString(requestBody.toString()))
+                .header("Accept-Encoding", "application/json")
                 .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .version(HttpClient.Version.HTTP_1_1)
                 .build();
 
         try {
             HttpResponse<Stream<String>> httpResp = httpClient.send(
                     httpReq, HttpResponse.BodyHandlers.ofLines());
 
-            httpResp.body().forEach(line -> {
-                if (line.isBlank()) return;
-
-                String token = extractField(line, "response");
-                if (token != null && !token.isEmpty()) {
+            httpResp.body().forEach(token -> {
+                if (!token.isBlank()) {
                     response.write(token.getBytes(StandardCharsets.UTF_8));
                 }
             });
@@ -69,54 +93,54 @@ public class InferenceService extends DistributedService<InferenceRequest, byte[
         }
     }
 
-    private static String buildRequestJson(String model, InferenceRequest req) {
-        StringBuilder json = new StringBuilder();
-        json.append("{\"model\":\"").append(escapeJson(model))
-            .append("\",\"prompt\":\"").append(escapeJson(req.prompt()))
-            .append("\",\"stream\":true");
-
-        if (req.maxOutputTokens() > 0) {
-            json.append(",\"options\":{\"num_predict\":").append(req.maxOutputTokens());
-            if (req.temperature() > 0) {
-                json.append(",\"temperature\":").append(req.temperature());
-            }
-            json.append("}");
-        } else if (req.temperature() > 0) {
-            json.append(",\"options\":{\"temperature\":").append(req.temperature()).append("}");
-        }
-
-        json.append("}");
-        return json.toString();
-    }
-
-    private static String extractField(String json, String field) {
-        String key = "\"" + field + "\":\"";
-        int start = json.indexOf(key);
-        if (start < 0) return null;
-        start += key.length();
-
-        StringBuilder sb = new StringBuilder();
-        for (int i = start; i < json.length(); i++) {
-            char c = json.charAt(i);
-            if (c == '\\' && i + 1 < json.length()) {
-                char next = json.charAt(i + 1);
-                switch (next) {
-                    case '"'  -> sb.append('"');
-                    case '\\' -> sb.append('\\');
-                    case 'n'  -> sb.append('\n');
-                    case 't'  -> sb.append('\t');
-                    case 'r'  -> sb.append('\r');
-                    default   -> { sb.append('\\'); sb.append(next); }
-                }
-                i++;
-            } else if (c == '"') {
-                break;
-            } else {
-                sb.append(c);
-            }
-        }
-        return sb.toString();
-    }
+//    private static String buildRequestJson(String model, InferenceRequest req) {
+//        StringBuilder json = new StringBuilder();
+//        json.append("{\"model\":\"").append(escapeJson(model))
+//            .append("\",\"prompt\":\"").append(escapeJson(req.prompt()))
+//            .append("\",\"stream\":true");
+//
+//        if (req.maxOutputTokens() > 0) {
+//            json.append(",\"options\":{\"num_predict\":").append(req.maxOutputTokens());
+//            if (req.temperature() > 0) {
+//                json.append(",\"temperature\":").append(req.temperature());
+//            }
+//            json.append("}");
+//        } else if (req.temperature() > 0) {
+//            json.append(",\"options\":{\"temperature\":").append(req.temperature()).append("}");
+//        }
+//
+//        json.append("}");
+//        return json.toString();
+//    }
+//
+//    private static String extractField(String json, String field) {
+//        String key = "\"" + field + "\":\"";
+//        int start = json.indexOf(key);
+//        if (start < 0) return null;
+//        start += key.length();
+//
+//        StringBuilder sb = new StringBuilder();
+//        for (int i = start; i < json.length(); i++) {
+//            char c = json.charAt(i);
+//            if (c == '\\' && i + 1 < json.length()) {
+//                char next = json.charAt(i + 1);
+//                switch (next) {
+//                    case '"'  -> sb.append('"');
+//                    case '\\' -> sb.append('\\');
+//                    case 'n'  -> sb.append('\n');
+//                    case 't'  -> sb.append('\t');
+//                    case 'r'  -> sb.append('\r');
+//                    default   -> { sb.append('\\'); sb.append(next); }
+//                }
+//                i++;
+//            } else if (c == '"') {
+//                break;
+//            } else {
+//                sb.append(c);
+//            }
+//        }
+//        return sb.toString();
+//    }
 
     private static String escapeJson(String s) {
         return s.replace("\\", "\\\\")

@@ -5,23 +5,24 @@ import java.io.Serializable;
 /**
  * Request payload for {@link InferenceService}.
  *
- * @param prompt          the user's prompt text
- * @param model           LLM model name (e.g. "llama3.2"); {@code null} uses the service default
+ * @param message          the user's message text
+ * @param adapter_id       LLM model name (e.g. "llama3.2"); {@code null} uses the service default
  * @param maxOutputTokens maximum tokens to generate; {@code 0} means no limit
- * @param temperature     sampling temperature; {@code 0} means use model default
+ * @param request_id       ID used to track the request (default: use private counter)
  */
 public record InferenceRequest(
-        String prompt,
-        String model,
+        String message,
+        String adapter_id,
         int maxOutputTokens,
-        double temperature
+        int request_id
 ) implements Serializable {
+    private static int lastId = 0;
 
     public InferenceRequest(String prompt) {
-        this(prompt, null, 0, 0);
+        this(prompt, null, 0, lastId++);
     }
 
-    public InferenceRequest(String prompt, String model) {
-        this(prompt, model, 0, 0);
+    public InferenceRequest(String prompt, String adapter_id) {
+        this(prompt, adapter_id, 0, lastId++);
     }
 }
