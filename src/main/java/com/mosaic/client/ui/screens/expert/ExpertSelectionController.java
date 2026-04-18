@@ -1,6 +1,7 @@
 package com.mosaic.client.ui.screens.expert;
 
 import com.mosaic.client.Navigator;
+import com.mosaic.client.service.AdapterMetadata;
 import com.mosaic.client.service.NetworkManager;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -16,8 +17,10 @@ import org.rumor.service.ServiceHandle;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Controller for the Expert Selection screen.
@@ -40,12 +43,12 @@ public class ExpertSelectionController {
     @FXML private ListView<Expert> expertListView;
 
     // ── AC3: Detail panel labels ─────────────────────────────
-    @FXML private VBox   detailCard;
-    @FXML private Label  detailName;
-    @FXML private Label  detailDomain;
-    @FXML private Label  detailSource;
-    @FXML private Label  detailAdapter;
-    @FXML private Label  detailStatus;
+    @FXML private VBox      detailCard;
+    @FXML private TextField detailName;
+    @FXML private TextField detailDomain;
+    @FXML private Label detailSource;
+    @FXML private Label detailAdapter;
+    @FXML private Label detailStatus;
 
     // ── AC4 + AC5: Action buttons ────────────────────────────
     @FXML private Button confirmBtn;
@@ -69,10 +72,21 @@ public class ExpertSelectionController {
     @FXML
     public void initialize() {
         // ── AC2: Local experts + network-discovered remote experts ─
-        allExperts = FXCollections.observableArrayList(
-            new Expert("Gardening Expert",  "Gardening", "Local",  "gardening_expert.gguf",  "Connected"),
-            new Expert("Chess Expert",      "Chess",     "Local",  "chess_expert.gguf",      "Connected")
-        );
+        allExperts = FXCollections.observableArrayList();
+
+        try {
+            loadLocalAdapters();
+        } catch (IOException e) {
+            System.getLogger("ExpertSelectionController").log(
+                    System.Logger.Level.ERROR,
+                    "Loading local adapters failed: " + e.getMessage()
+            );
+            Alert alert = new Alert(
+                    Alert.AlertType.ERROR,
+                    "Loading local adapters failed (%s). Displaying only remote adapters.".formatted(e.getMessage())
+            );
+            alert.showAndWait();
+        }
 
         // Merge remote adapters discovered via gossip
         loadRemoteAdapters();
@@ -278,6 +292,38 @@ public class ExpertSelectionController {
         Navigator.showWorkspace();
     }
 
+    // ── Load local adapters ────────────────────
+
+    private void loadLocalAdapters() throws IOException {
+        // Remove the current local adapters
+        allExperts.removeAll(
+                allExperts.stream()
+                        .filter(e -> { return Objects.equals(e.source, "Local"); })
+                        .toList()
+        );
+
+        // Reload local adapters
+        Files.list(NetworkManager.getInstance().getAdaptersDir())
+                .filter(Files::isDirectory)
+                .forEach(
+                        (Path dir) -> {
+                            File child = dir.resolve("adapter.yml").toFile();
+                            if (child.exists() && child.isFile()) {
+                                AdapterMetadata metadata = AdapterMetadata.fromFile(child.toPath());
+                                allExperts.add(
+                                        new Expert(
+                                                metadata.name(),
+                                                metadata.domain(),
+                                                "Local",
+                                                dir.getFileName().toString(),
+                                                "Available"
+                                        )
+                                );
+                            };
+                        }
+                );
+    }
+
     // ── Network discovery ────────────────────────────────────
 
     /**
@@ -335,6 +381,32 @@ public class ExpertSelectionController {
             FileUtils.copyDirectory(newAdapterDir, targetDir);
         } catch (IOException e) {
             new Alert(Alert.AlertType.ERROR, "Failed to copy adapter: " + e.getMessage()).showAndWait();
+            return;
+        }
+
+        if (!targetDir.exists()) {
+            new Alert(Alert.AlertType.ERROR, "Failed to copy adapter: File missing after copy").showAndWait();
+            return;
+        }
+
+        Path configFile = targetDir.toPath().resolve("adapter.yml");
+        if (!Files.exists(configFile)) {
+            new AdapterMetadata("", "").toFile(
+                    targetDir.toPath().resolve("adapter.yml")
+            );
+        }
+
+        try {
+            loadLocalAdapters();
+        } catch (IOException e) {
+            System.getLogger("ExpertSelectionController").log(
+                    System.Logger.Level.ERROR,
+                    "Loading local adapters failed: " + e.getMessage()
+            );
+            new Alert(
+                    Alert.AlertType.ERROR,
+                    "Loading local adapters failed (%s).".formatted(e.getMessage())
+            ).showAndWait();
         }
     }
 

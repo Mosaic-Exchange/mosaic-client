@@ -4,6 +4,7 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.layout.BorderPane?>
@@ -80,9 +81,9 @@
                 <Label text="Expert Details" styleClass="label-title"/>
                 <Separator/>
                 <Label text="Name" styleClass="label-muted"/>
-                <Label fx:id="detailName" text="—" styleClass="label-body"/>
+                <TextField fx:id="detailName" text="—" editable="false" styleClass="label-body"/>
                 <Label text="Domain" styleClass="label-muted"/>
-                <Label fx:id="detailDomain" text="—" styleClass="label-body"/>
+                <TextField fx:id="detailDomain" text="—" editable="false" styleClass="label-body"/>
                 <Label text="Source" styleClass="label-muted"/>
                 <Label fx:id="detailSource" text="—" styleClass="label-body"/>
                 <Label text="Adapter" styleClass="label-muted"/>
