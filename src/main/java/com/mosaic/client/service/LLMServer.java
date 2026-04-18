@@ -233,10 +233,13 @@ public class LLMServer {
                     "Middleware server health check returned bad HTTP status (%s).".formatted(response.statusCode())
             );
             return new HealthCheckResult(false, false, Optional.of(response.toString()));
-        } else if (state.get().equals(State.DISCONNECTED)) {
+        } else if (
+                lastHealthCheck.get().error().isPresent()
+                        && lastHealthCheck.get().error().get().contains("Exception")
+        ) {
             System.getLogger("AIServer.healthCheck").log(
                     System.Logger.Level.INFO,
-                    "Connection established (middleware server health check responded with HTTP 200 OK)."
+                    "Connection (re)established (middleware server health check responded with HTTP 200 OK)."
             );
         }
 

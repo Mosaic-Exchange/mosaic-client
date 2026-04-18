@@ -138,26 +138,21 @@ public class MainWorkspaceController {
 
         // Disable the chat panel if the current adapter is local, and the server is unavailable.
         ReadOnlyObjectProperty<LLMServer.State> serverState = NetworkManager.getInstance().llmServerStateProperty();
-        serverState.addListener((observable, oldValue, newValue) -> {
-            setChatPanelDisabled(
-                    (Navigator.getActiveExpert() == null ||
-                            !Navigator.getActiveExpert()[2].equals("Remote")) &&
-                            newValue != LLMServer.State.CONNECTED
-            );
-        });
-
-        // Disable the chat panel when switching to a local adapter, and the server is unreachable.
-        headerExpertSource.textProperty().addListener(
+        serverState.addListener(
                 (observable, oldValue, newValue) -> {
                     setChatPanelDisabled(
-                            !newValue.equals("Remote") &&
-                                    serverState.get() != LLMServer.State.CONNECTED
+                            (Navigator.getActiveExpert() == null ||
+                                    !Navigator.getActiveExpert()[2].equals("Remote")) &&
+                                    newValue != LLMServer.State.CONNECTED
                     );
                 }
         );
 
         // Initial state
-        setChatPanelDisabled(serverState.get() != LLMServer.State.CONNECTED);
+        setChatPanelDisabled((Navigator.getActiveExpert() == null ||
+                !Navigator.getActiveExpert()[2].equals("Remote")) &&
+                serverState.get() != LLMServer.State.CONNECTED
+        );
     }
 
     public synchronized void setChatPanelDisabled(boolean disabled) {
