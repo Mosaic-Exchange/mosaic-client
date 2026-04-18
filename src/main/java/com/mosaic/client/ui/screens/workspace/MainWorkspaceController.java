@@ -219,6 +219,18 @@ public class MainWorkspaceController {
                 (observable, oldValue, newValue) -> {
                     if (newValue != null) {
                         addExpertMessage(newValue);
+                        // Persist the assistant response to the database
+                        if (currentSession != null) {
+                            try {
+                                String[] activeExpert = Navigator.getActiveExpert();
+                                String adapterId = (activeExpert != null) ? activeExpert[3] : null;
+                                ChatMessage assistantMsg = new ChatMessage(
+                                        currentSession.getSessionId(), "Assistant", newValue, adapterId);
+                                messageDao.create(assistantMsg);
+                            } catch (SQLException e) {
+                                e.printStackTrace();
+                            }
+                        }
                     }
                 }
         );
