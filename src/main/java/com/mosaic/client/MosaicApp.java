@@ -3,6 +3,7 @@ package com.mosaic.client;
 
 import com.mosaic.client.db.DatabaseManager;
 import com.mosaic.client.service.NetworkManager;
+import java.nio.file.Path;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
@@ -51,6 +52,22 @@ public class MosaicApp extends Application {
     }
 
     public static void main(String[] args) {
+        String configFile = "mosaic.yml";
+        for (int i = 0; i < args.length; i++) {
+            if ("--config".equals(args[i]) && i + 1 < args.length) {
+                configFile = args[i + 1];
+                break;
+            }
+        }
+
+        // Resolve relative to CWD
+        try {
+            configFile = Path.of(configFile).toAbsolutePath().normalize().toString();
+        } catch (Exception ignored) {
+            // Fallback to whatever was provided
+        }
+
+        AppConfig.setActiveConfigFilename(configFile);
         launch(args);
     }
 }

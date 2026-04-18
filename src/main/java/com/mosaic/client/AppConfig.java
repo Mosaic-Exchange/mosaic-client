@@ -16,6 +16,8 @@ import java.util.List;
  */
 public class AppConfig {
 
+    private static String activeConfigFilename;
+
     private int port = 7000;
     private String nodeType = "basic";
     private String seed = "";
@@ -24,6 +26,22 @@ public class AppConfig {
     private String dataDir = System.getProperty("user.home") + "/.mosaic";
 
     private AppConfig() {}
+
+    /**
+     * Sets the configuration file name to use globally (e.g. {@code mosaic.yml}).
+     */
+    public static void setActiveConfigFilename(String filename) {
+        if (filename != null && !filename.isBlank()) {
+            activeConfigFilename = filename;
+        }
+    }
+
+    /**
+     * @return The currently active configuration file name.
+     */
+    public static String getActiveConfigFilename() {
+        return activeConfigFilename != null ? activeConfigFilename : "mosaic.yml";
+    }
 
     /**
      * Base directory for config and generated defaults: the folder containing
@@ -54,9 +72,17 @@ public class AppConfig {
         return Path.of("").toAbsolutePath();
     }
 
-    /** {@code mosaic.yml} under {@link #appHome()}. */
+    /**
+     * @param filename Configuration file name (e.g. {@code mosaic.yml})
+     * @return Path to the config file under {@link #appHome()}.
+     */
+    public static Path configPath(String filename) {
+        return appHome().resolve(filename);
+    }
+
+    /** {@link #getActiveConfigFilename()} under {@link #appHome()}. */
     public static Path configPath() {
-        return appHome().resolve("mosaic.yml");
+        return configPath(getActiveConfigFilename());
     }
 
     /** Non-empty seed entries parsed from {@link #seed()} (single value for now). */
@@ -66,15 +92,15 @@ public class AppConfig {
     }
 
     /**
-     * Loads config from {@link #configPath()}.
+     * Loads config from a specific file name under {@link #appHome()}.
      * Returns defaults if the file is missing or unreadable.
      */
-    public static AppConfig load() {
-        Path path = configPath();
+    public static AppConfig load(String filename) {
+        Path path = configPath(filename);
         AppConfig config = new AppConfig();
 
         if (!Files.isRegularFile(path)) {
-            System.out.println("[config] mosaic.yml not found — using defaults");
+            System.out.println("[config] " + filename + " not found — using defaults");
             return config;
         }
 
@@ -99,24 +125,33 @@ public class AppConfig {
                     case "data-dir"      -> config.dataDir = value;
                 }
             }
-            System.out.println("[config] Loaded mosaic.yml — port=" + config.port
+            System.out.println("[config] Loaded " + filename + " — port=" + config.port
                     + " type=" + config.nodeType
                     + " seed=" + (config.seed.isEmpty() ? "(none)" : config.seed)
                     + " debug=" + config.debugEnabled
                     + " data-dir=" + config.dataDir);
         } catch (IOException e) {
-            System.err.println("[config] Failed to read mosaic.yml: " + e.getMessage());
+            System.err.println("[config] Failed to read " + filename + ": " + e.getMessage());
         }
 
         return config;
     }
 
     /**
+     * Loads config from {@link #configPath()}.
+     * Returns defaults if the file is missing or unreadable.
+     */
+    public static AppConfig load() {
+        return load(getActiveConfigFilename());
+    }
+
+    /**
      * Writes a default config file if none exists. Called once at startup
      * so the user always has a reference to edit.
+     * @param filename Configuration file name (e.g. {@code mosaic.yml})
      */
-    public static void writeDefaultIfMissing() {
-        Path path = configPath();
+    public static void writeDefaultIfMissing(String filename) {
+        Path path = configPath(filename);
         if (Files.exists(path)) return;
 
                 String content = """
@@ -144,11 +179,19 @@ public class AppConfig {
                 """;
         try {
             Files.writeString(path, content);
-            System.out.println("[config] Created default mosaic.yml");
+            System.out.println("[config] Created default " + filename);
         } catch (IOException e) {
             // Non-fatal — the app works fine without the file
-            System.err.println("[config] Could not write default mosaic.yml: " + e.getMessage());
+            System.err.println("[config] Could not write default " + filename + ": " + e.getMessage());
         }
+    }
+
+    /**
+     * Writes a default config file if none exists. Called once at startup
+     * so the user always has a reference to edit.
+     */
+    public static void writeDefaultIfMissing() {
+        writeDefaultIfMissing(getActiveConfigFilename());
     }
 
     // -- Accessors --

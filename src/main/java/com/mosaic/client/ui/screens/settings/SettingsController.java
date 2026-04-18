@@ -131,7 +131,7 @@ public class SettingsController {
             seeds[i] = seeds[i].trim();
         }
 
-        // Restart with new config (debug file / flag still follow mosaic.yml)
+        // Restart with new config (debug file / flag still follow active config)
         net.stop();
         try {
             AppConfig cfg = AppConfig.load();
