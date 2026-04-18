@@ -6,6 +6,7 @@ import org.rumor.service.ServiceRequest;
 import org.rumor.service.ServiceResponse;
 import org.rumor.service.Streamable;
 
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
@@ -13,7 +14,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.stream.Stream;
 
 /**
  * LLM inference service backed by an Ollama HTTP endpoint.
@@ -27,7 +27,6 @@ import java.util.stream.Stream;
 public class InferenceService extends DistributedService<InferenceRequest, byte[]> {
 
     private final URI endpoint;
-    private final String defaultModel;
     private final HttpClient httpClient;
 
     // API paths
@@ -49,12 +48,11 @@ public class InferenceService extends DistributedService<InferenceRequest, byte[
     );
 
     public InferenceService() throws URISyntaxException {
-        this("http://127.0.0.1:4000", "");
+        this("http://127.0.0.1:4000");
     }
 
-    public InferenceService(String endpoint, String defaultModel) throws URISyntaxException {
+    public InferenceService(String endpoint) throws URISyntaxException {
         this.endpoint = new URI(endpoint);
-        this.defaultModel = defaultModel;
         this.httpClient = HttpClient.newHttpClient();
     }
 
@@ -78,75 +76,19 @@ public class InferenceService extends DistributedService<InferenceRequest, byte[
                 .build();
 
         try {
-            HttpResponse<Stream<String>> httpResp = httpClient.send(
-                    httpReq, HttpResponse.BodyHandlers.ofLines());
+            HttpResponse<InputStream> httpResp = httpClient.send(
+                    httpReq, HttpResponse.BodyHandlers.ofInputStream());
 
-            httpResp.body().forEach(token -> {
-                if (!token.isBlank()) {
-                    response.write(token.getBytes(StandardCharsets.UTF_8));
+            try (InputStream is = httpResp.body()) {
+                int newByte;
+                while ((newByte = is.read()) != -1) {
+                    response.write(new byte[]{(byte) newByte});
                 }
-            });
+            }
 
             response.close();
         } catch (Exception e) {
             response.fail(("Inference error: " + e.getMessage()).getBytes(StandardCharsets.UTF_8));
         }
-    }
-
-//    private static String buildRequestJson(String model, InferenceRequest req) {
-//        StringBuilder json = new StringBuilder();
-//        json.append("{\"model\":\"").append(escapeJson(model))
-//            .append("\",\"prompt\":\"").append(escapeJson(req.prompt()))
-//            .append("\",\"stream\":true");
-//
-//        if (req.maxOutputTokens() > 0) {
-//            json.append(",\"options\":{\"num_predict\":").append(req.maxOutputTokens());
-//            if (req.temperature() > 0) {
-//                json.append(",\"temperature\":").append(req.temperature());
-//            }
-//            json.append("}");
-//        } else if (req.temperature() > 0) {
-//            json.append(",\"options\":{\"temperature\":").append(req.temperature()).append("}");
-//        }
-//
-//        json.append("}");
-//        return json.toString();
-//    }
-//
-//    private static String extractField(String json, String field) {
-//        String key = "\"" + field + "\":\"";
-//        int start = json.indexOf(key);
-//        if (start < 0) return null;
-//        start += key.length();
-//
-//        StringBuilder sb = new StringBuilder();
-//        for (int i = start; i < json.length(); i++) {
-//            char c = json.charAt(i);
-//            if (c == '\\' && i + 1 < json.length()) {
-//                char next = json.charAt(i + 1);
-//                switch (next) {
-//                    case '"'  -> sb.append('"');
-//                    case '\\' -> sb.append('\\');
-//                    case 'n'  -> sb.append('\n');
-//                    case 't'  -> sb.append('\t');
-//                    case 'r'  -> sb.append('\r');
-//                    default   -> { sb.append('\\'); sb.append(next); }
-//                }
-//                i++;
-//            } else if (c == '"') {
-//                break;
-//            } else {
-//                sb.append(c);
-//            }
-//        }
-//        return sb.toString();
-//    }
-
-    private static String escapeJson(String s) {
-        return s.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t");
     }
 }
