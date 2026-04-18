@@ -1,5 +1,8 @@
 package com.mosaic.client.service;
 
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import org.rumor.gossip.EndpointState;
 import org.rumor.gossip.NodeId;
 import org.rumor.node.NodeType;
@@ -26,14 +29,23 @@ import java.util.Map;
  * call them safely from any thread.
  */
 public class NetworkManager {
+    private static final String LOG_NAME = "rumor.log";
 
     private static NetworkManager instance;
 
     private Rumor rumor;
+    private LLMServer llmServer;
     private InferenceService inferenceService;
     private AdapterTransferService adapterTransferService;
     private volatile boolean running;
     private Path adaptersDir;
+
+    // JavaFX Properties
+    private final ObjectProperty<LLMServer.State> llmServerState = new SimpleObjectProperty<>(LLMServer.State.DISCONNECTED);
+
+    // Accessor renders the property read-only
+    public ReadOnlyObjectProperty<LLMServer.State> llmServerStateProperty() { return llmServerState; }
+    public LLMServer.State llmServerState() { return llmServerState.get(); }
 
     private NetworkManager() {}
 
@@ -47,19 +59,21 @@ public class NetworkManager {
     /**
      * Starts the Rumor node with the given configuration.
      *
-     * @param port         listen port
-     * @param nodeType     node type string ("master", "basic", "seed", "eviction")
-     * @param debugEnabled whether to write periodic debug snapshots
-     * @param debugFile    path for the debug snapshot file (ignored if debug disabled)
-     * @param mosaicDir    root data directory; adapters are stored in a subdirectory
-     * @param seeds        seed addresses as "host:port" strings; may be empty
+     * @param port          listen port
+     * @param llmServerPort local LLM server port
+     * @param nodeType      node type string ("master", "basic", "seed", "eviction")
+     * @param debugEnabled  whether to write periodic debug snapshots
+     * @param mosaicDir     root data directory; adapters are stored in a subdirectory
+     * @param logDir        directory for log files (e.g. "logs")
+     * @param seeds         seed addresses as "host:port" strings; may be empty
      */
-    public void start(int port, String nodeType, boolean debugEnabled,
-                      String debugFile, Path mosaicDir, String... seeds) throws Exception {
+    public void start(int port, int llmServerPort, String nodeType, boolean debugEnabled,
+                      Path mosaicDir, Path logDir, String... seeds) throws Exception {
         if (running) return;
 
         adaptersDir = mosaicDir.resolve("adapters");
         Files.createDirectories(adaptersDir);
+        Files.createDirectories(logDir);
 
         RumorConfig config = new RumorConfig();
         config.port(port).nodeType(NodeType.fromString(nodeType));
@@ -69,6 +83,10 @@ public class NetworkManager {
             String[] parts = seed.split(":");
             config.addSeed(parts[0].trim(), Integer.parseInt(parts[1].trim()));
         }
+
+        llmServer = LLMServer.getInstance();
+        llmServer.start("localhost", llmServerPort, null, logDir);
+        llmServerState.bind(llmServer.stateProperty());
 
         rumor = new Rumor(config);
 
@@ -85,8 +103,8 @@ public class NetworkManager {
                 .remoteThreads(2)
                 .remoteQueueCapacity(1));
 
-        if (debugEnabled && debugFile != null && !debugFile.isBlank()) {
-            rumor.registerDebug(Path.of(debugFile));
+        if (debugEnabled) {
+            rumor.registerDebug(logDir.resolve(LOG_NAME));
         }
 
         rumor.start();
@@ -96,8 +114,8 @@ public class NetworkManager {
     /**
      * Convenience overload for callers that don't need debug (e.g. Settings restart).
      */
-    public void start(int port, String nodeType, Path mosaicDir, String... seeds) throws Exception {
-        start(port, nodeType, false, null, mosaicDir, seeds);
+    public void start(int port, int llmServerPort, String nodeType, Path mosaicDir, Path logDir, String... seeds) throws Exception {
+        start(port, llmServerPort, nodeType, false, mosaicDir, logDir, seeds);
     }
 
     /**
@@ -109,6 +127,10 @@ public class NetworkManager {
         if (rumor != null) {
             rumor.stop();
             rumor = null;
+        }
+        if (llmServer != null) {
+            llmServer.stop();
+            llmServer = null;
         }
     }
 

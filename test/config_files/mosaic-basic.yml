@@ -1,0 +1,23 @@
+# Mosaic configuration
+# Lives next to the runnable jar (or project root in dev).
+
+# Network port this node listens on
+port: 7001
+
+llm-server-port: 4001
+
+# Node type: basic | seed | eviction | master
+node-type: basic
+
+# Seed node to bootstrap into the cluster (host:port)
+# Leave empty to start as a standalone node.
+seed: 127.0.0.1:7000
+
+# Debug snapshot file (written periodically while running)
+debug-file: mosaic-basic-debug.txt
+
+# Set to true to enable periodic debug snapshots
+debug-enabled: true
+
+# Directory used to store the database and adapters (default: ~/.mosaic)
+data-dir: mosaic-shared/basic

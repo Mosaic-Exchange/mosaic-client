@@ -22,10 +22,11 @@ public class MosaicApp extends Application {
         try {
             NetworkManager.getInstance().start(
                     config.port(),
+                    config.llmServerPort(),
                     config.nodeType(),
                     config.debugEnabled(),
-                    config.debugFile(),
                     config.dataDir(),
+                    config.logDir(),
                     config.seedAddresses());
         } catch (Exception e) {
             System.err.println("Failed to start network node: " + e.getMessage());

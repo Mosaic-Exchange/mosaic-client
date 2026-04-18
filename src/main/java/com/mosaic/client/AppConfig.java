@@ -19,6 +19,7 @@ public class AppConfig {
     private static String activeConfigFilename;
 
     private int port = 7000;
+    private int llmServerPort = 4000;
     private String nodeType = "basic";
     private String seed = "";
     private String debugFile = "mosaic-debug.txt";
@@ -117,15 +118,17 @@ public class AppConfig {
                 String value = line.substring(colon + 1).trim();
 
                 switch (key) {
-                    case "port"          -> config.port = parsePort(value);
-                    case "node-type"     -> config.nodeType = value;
-                    case "seed"          -> config.seed = value;
-                    case "debug-file"    -> config.debugFile = value;
-                    case "debug-enabled" -> config.debugEnabled = parseBoolean(value);
-                    case "data-dir"      -> config.dataDir = value;
+                    case "port"            -> config.port = parsePort(value);
+                    case "llm-server-port" -> config.llmServerPort = parsePort(value);
+                    case "node-type"       -> config.nodeType = value;
+                    case "seed"            -> config.seed = value;
+                    case "debug-file"      -> config.debugFile = value;
+                    case "debug-enabled"   -> config.debugEnabled = parseBoolean(value);
+                    case "data-dir"        -> config.dataDir = value;
                 }
             }
             System.out.println("[config] Loaded " + filename + " — port=" + config.port
+                    + " llm-port=" + config.llmServerPort
                     + " type=" + config.nodeType
                     + " seed=" + (config.seed.isEmpty() ? "(none)" : config.seed)
                     + " debug=" + config.debugEnabled
@@ -160,6 +163,9 @@ public class AppConfig {
 
                 # Network port this node listens on
                 port: 7000
+
+                # Network port for the local LLM server (middleware)
+                llm-server-port: 4000
 
                 # Node type: basic | seed | eviction | master
                 node-type: basic
@@ -197,11 +203,13 @@ public class AppConfig {
     // -- Accessors --
 
     public int port()             { return port; }
+    public int llmServerPort()    { return llmServerPort; }
     public String nodeType()      { return nodeType; }
     public String seed()          { return seed; }
     public String debugFile()     { return debugFile; }
     public boolean debugEnabled() { return debugEnabled; }
     public Path dataDir()         { return Path.of(dataDir); }
+    public Path logDir()          { return dataDir().resolve("logs"); }
 
     // -- Parse helpers --
 

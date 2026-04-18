@@ -5,8 +5,10 @@ import com.mosaic.client.db.dao.ChatMessageDao;
 import com.mosaic.client.db.dao.ChatSessionDao;
 import com.mosaic.client.db.model.ChatMessage;
 import com.mosaic.client.db.model.ChatSession;
+import com.mosaic.client.service.LLMServer;
 import com.mosaic.client.service.NetworkManager;
 
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -86,6 +88,7 @@ public class MainWorkspaceController {
 
     // ── APP-MW-5 (#15) fields ────────────────────────────────
     @FXML private Button clearContextBtn;
+    @FXML private Button sendBtn;
 
     @FXML
     public void initialize() {
@@ -132,6 +135,34 @@ public class MainWorkspaceController {
             loadActiveExpert("Gardening Expert", "Gardening", "Local",
                              "gardening_expert.gguf", "Connected");
         }
+
+        // Disable the chat panel if the current adapter is local, and the server is unavailable.
+        ReadOnlyObjectProperty<LLMServer.State> serverState = NetworkManager.getInstance().llmServerStateProperty();
+        serverState.addListener((observable, oldValue, newValue) -> {
+            setChatPanelDisabled(
+                    (Navigator.getActiveExpert() == null ||
+                            !Navigator.getActiveExpert()[2].equals("Remote")) &&
+                            newValue != LLMServer.State.CONNECTED
+            );
+        });
+
+        // Disable the chat panel when switching to a local adapter, and the server is unreachable.
+        headerExpertSource.textProperty().addListener(
+                (observable, oldValue, newValue) -> {
+                    setChatPanelDisabled(
+                            !newValue.equals("Remote") &&
+                                    serverState.get() != LLMServer.State.CONNECTED
+                    );
+                }
+        );
+
+        // Initial state
+        setChatPanelDisabled(serverState.get() != LLMServer.State.CONNECTED);
+    }
+
+    public synchronized void setChatPanelDisabled(boolean disabled) {
+        messageInput.setDisable(disabled);
+        sendBtn.setDisable(disabled);
     }
 
     // ── APP-MW-4 (#14): Expert metadata helpers ──────────────
