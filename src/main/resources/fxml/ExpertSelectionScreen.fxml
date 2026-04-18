@@ -49,6 +49,15 @@
 
             <Label text="Availability" styleClass="label-muted"/>
             <ComboBox fx:id="availabilityFilter" maxWidth="Infinity" promptText="All"/>
+
+            <!-- Spacer -->
+            <Region VBox.vgrow="ALWAYS"/>
+
+            <!-- AC4 + AC5: Action buttons -->
+            <VBox spacing="10" alignment="BOTTOM_CENTER">
+                <Button fx:id="addAdapterBtn" text="Add new adapter..." styleClass="btn-cta"
+                        maxWidth="Infinity" onAction="#onAddAdapterFile"/>
+            </VBox>
         </VBox>
     </left>
 

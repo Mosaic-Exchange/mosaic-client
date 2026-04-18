@@ -185,10 +185,6 @@ public class LLMServer {
         }
     }
 
-    private int getRequestId() {
-        return this.lastId++;
-    }
-
     public record HealthCheckResult(
             boolean middlewareConnected,
             boolean llamaCppConnected,

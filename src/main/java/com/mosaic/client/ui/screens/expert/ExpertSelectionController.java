@@ -1,25 +1,21 @@
 package com.mosaic.client.ui.screens.expert;
 
+import com.mosaic.client.Navigator;
+import com.mosaic.client.service.NetworkManager;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
-import javafx.scene.control.ListCell;
-import javafx.scene.control.ListView;
-import javafx.scene.control.Button;
-import javafx.scene.control.ProgressBar;
+import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
-
-import com.mosaic.client.Navigator;
-import com.mosaic.client.service.NetworkManager;
-
+import javafx.stage.DirectoryChooser;
+import org.apache.commons.io.FileUtils;
 import org.rumor.gossip.NodeId;
 import org.rumor.service.ServiceHandle;
 
+import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Map;
 
@@ -54,6 +50,7 @@ public class ExpertSelectionController {
     // ── AC4 + AC5: Action buttons ────────────────────────────
     @FXML private Button confirmBtn;
     @FXML private Button downloadBtn;
+    @FXML private Button addAdapterBtn;
 
     @FXML private ProgressBar downloadProgress;
 
@@ -306,6 +303,56 @@ public class ExpertSelectionController {
                 allExperts.add(new Expert(displayName, "Remote", "Remote", name, "Connected"));
             }
         }
+    }
+
+    public void onAddAdapterFile(ActionEvent actionEvent) {
+        Alert alert = new Alert(
+                Alert.AlertType.INFORMATION,
+                "To create a new adapter, ensure the directory selected only contains adapter files. " +
+                        "Mosaic supports the following adapters\n\n" +
+                        "  1. Safetensor (.safetensors) with adapter config (adapter_config.json).\n" +
+                        "  2. .gguf file.\n\n" +
+                        "with (optionally) any of the following files:\n\n" +
+                        "  • system_prompt.txt — A system prompt applied automatically when this adapter is used.\n" +
+                        "  • parameter_suggestions.json — Default generation parameters.\n\n" +
+                        "For more details, please consult the documentation found in llm-server/SETUP.md.",
+                new ButtonType("Understood")
+        );
+        alert.showAndWait();
+
+        DirectoryChooser directoryChooser = new DirectoryChooser();
+        directoryChooser.setTitle("Select Adapter Directory");
+
+        File newAdapterDir = directoryChooser.showDialog(addAdapterBtn.getScene().getWindow());
+
+        if (newAdapterDir == null) {
+            return;
+        }
+
+        File targetDir = newAdapterTargetDir(newAdapterDir);
+
+        try {
+            FileUtils.copyDirectory(newAdapterDir, targetDir);
+        } catch (IOException e) {
+            new Alert(Alert.AlertType.ERROR, "Failed to copy adapter: " + e.getMessage()).showAndWait();
+        }
+    }
+
+    private static File newAdapterTargetDir(File newAdapterDir) {
+        Path adaptersDir = NetworkManager.getInstance().getAdaptersDir();
+        String originalName = newAdapterDir.getName();
+        File targetDir = adaptersDir.resolve(originalName).toFile();
+
+        // Check for collisions
+        if (targetDir.exists()) {
+            int counter = 1;
+            while (targetDir.exists()) {
+                String newName = originalName + "-" + counter;
+                targetDir = adaptersDir.resolve(newName).toFile();
+                counter++;
+            }
+        }
+        return targetDir;
     }
 
     // ── Inner record for expert data ─────────────────────────
