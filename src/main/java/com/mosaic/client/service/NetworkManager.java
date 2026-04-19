@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Singleton managing the Rumor network node and all distributed services.
@@ -311,6 +312,20 @@ public class NetworkManager {
 
     public Path getAdaptersDir() {
         return adaptersDir;
+    }
+
+    /**
+     * Registers a new adapter by copying its directory to the internal adapters folder
+     * and notifying the LLM server.
+     */
+    public void registerAdapter(Path newAdapterDir, Consumer<LLMServer.AdapterResponse> onComplete, Consumer<Throwable> onFailure) {
+        if (llmServer == null) {
+            if (onFailure != null) {
+                Platform.runLater(() -> onFailure.accept(new IllegalStateException("LLM Server not started")));
+            }
+            return;
+        }
+        llmServer.registerAdapter(newAdapterDir, onComplete, onFailure);
     }
 
     // -- Utilities --

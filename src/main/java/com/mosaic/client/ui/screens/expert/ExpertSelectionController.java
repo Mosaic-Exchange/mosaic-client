@@ -3,6 +3,7 @@ package com.mosaic.client.ui.screens.expert;
 import com.mosaic.client.Navigator;
 import com.mosaic.client.service.AdapterMetadata;
 import com.mosaic.client.service.NetworkManager;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -202,8 +203,28 @@ public class ExpertSelectionController {
     private void onConfirm() {
         if (selectedExpert != null) {
             Navigator.setActiveExpert(selectedExpert);
+
+            // TODO surround with if (unloaded)
+            confirmBtn.getScene().getRoot().setDisable(true);
+
+            NetworkManager.getInstance().registerAdapter(
+                    NetworkManager.getInstance().getAdaptersDir().resolve(selectedExpert.adapterFile()),
+                    response -> {
+                        confirmBtn.getScene().getRoot().setDisable(false);
+                        if (response.error().isPresent()) {
+                            Platform.runLater(() -> { new Alert(Alert.AlertType.ERROR, "Failed to register adapter: " + response.error().get()).showAndWait(); });
+                            return;
+                        }
+                        Platform.runLater(() -> { new Alert(Alert.AlertType.INFORMATION, "Registered adapter with response: " + response).showAndWait(); });
+                    },
+                    throwable -> {
+                        confirmBtn.getScene().getRoot().setDisable(false);
+                        Platform.runLater(() -> { new Alert(Alert.AlertType.ERROR, "Error during adapter registration: " + throwable.getMessage()).showAndWait(); });
+                    }
+            );
+        } else {
+            Navigator.showWorkspace();
         }
-        Navigator.showWorkspace();
     }
 
     // ── AC5: Download adapter from remote peer ────────────────

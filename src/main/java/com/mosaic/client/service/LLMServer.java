@@ -4,8 +4,10 @@ import javafx.beans.property.*;
 import javafx.concurrent.ScheduledService;
 import javafx.concurrent.Task;
 import javafx.util.Duration;
+import org.apache.commons.io.FileUtils;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.net.URI;
@@ -17,6 +19,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -77,7 +80,7 @@ public class LLMServer {
     private int lastId = 0;
     private boolean processing = false;  // Lock on requests
 
-    // Counter for unique request IDs, do not access directly (use getRequestId()).
+    // Counter for unique request IDs, do not access directly (use getNewRequestId()).
     private final AtomicInteger requestIdCounter = new AtomicInteger(0);
 
     private LLMServer() throws URISyntaxException { }
@@ -189,8 +192,74 @@ public class LLMServer {
         }
     }
 
-    private synchronized int getRequestIdCounter() {
-        return requestIdCounter.getAndIncrement();
+    private synchronized String getNewRequestId() {
+        return String.valueOf(requestIdCounter.getAndIncrement());
+    }
+
+    private Path getAdaptersDir() {
+        return SERVER_DIR.resolve("adapters");
+    }
+
+    public void registerAdapter(Path newAdapterDir, Consumer<AdapterResponse> onComplete, Consumer<Throwable> onFailure) {
+        Task<AdapterResponse> registrationTask = new Task<>() {
+            @Override
+            protected AdapterResponse call() throws Exception {
+                File targetDir = newAdapterTargetDir(newAdapterDir.toFile());
+
+                try {
+                    FileUtils.copyDirectory(newAdapterDir.toFile(), targetDir);
+                } catch (IOException e) {
+                    return new AdapterResponse(null, null, Optional.of("Failed to copy adapter: " + e.getMessage()));
+                }
+
+                if (!targetDir.exists()) {
+                    return new AdapterResponse(null, null, Optional.of("Failed to copy adapter: File missing after copy"));
+                }
+
+                Path configFile = targetDir.toPath().resolve("adapter.yml");
+                if (!Files.exists(configFile)) {
+                    try {
+                        Files.delete(configFile);
+                    } catch (IOException e) {
+                        // Unexpected state, exit gracelessly
+                        throw new RuntimeException(e);
+                    }
+                }
+
+                return addAdapter(targetDir.getName());
+            }
+        };
+
+        registrationTask.setOnSucceeded(event -> {
+            if (onComplete != null) {
+                onComplete.accept(registrationTask.getValue());
+            }
+        });
+
+        registrationTask.setOnFailed(event -> {
+            if (onFailure != null) {
+                onFailure.accept(registrationTask.getException());
+            }
+        });
+
+        new Thread(registrationTask).start();
+    }
+
+    private File newAdapterTargetDir(File newAdapterDir) {
+        Path adaptersDir = getAdaptersDir();
+        String originalName = newAdapterDir.getName();
+        File targetDir = adaptersDir.resolve(originalName).toFile();
+
+        // Check for collisions
+        if (targetDir.exists()) {
+            int counter = 1;
+            while (targetDir.exists()) {
+                String newName = originalName + "-" + counter;
+                targetDir = adaptersDir.resolve(newName).toFile();
+                counter++;
+            }
+        }
+        return targetDir;
     }
 
     public record AdapterResponse(
@@ -212,7 +281,7 @@ public class LLMServer {
             URI target = this.baseUri.resolve(apiSpec.get(APIOperation.ADD_ADAPTER));
             JSONObject requestBody = new JSONObject();
             requestBody.put("adapter_dir", adapterDir);
-            requestBody.put("request_id", getRequestIdCounter());
+            requestBody.put("request_id", getNewRequestId());
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(target)
@@ -230,7 +299,8 @@ public class LLMServer {
                         "Middleware server addAdapter returned bad HTTP status (%s). Body: %s"
                                 .formatted(response.statusCode(), response.body())
                 );
-                return new AdapterResponse(null, null, Optional.of("HTTP " + response.statusCode()));
+                return new AdapterResponse(null, null,
+                        Optional.of("HTTP %d. Response body:\n%s".formatted(response.statusCode(), response.body())));
             }
 
             JSONObject responseBody = new JSONObject(response.body());
