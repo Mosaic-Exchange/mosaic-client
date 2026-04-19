@@ -93,7 +93,7 @@
                 <Label text="Adapter" styleClass="label-muted"/>
                 <Label fx:id="metaAdapterFile" text="gardening_expert.gguf" styleClass="label-body" wrapText="true"/>
                 <Label text="Status" styleClass="label-muted"/>
-                <Label fx:id="metaExpertStatus" text="Connected" styleClass="expert-status-connected"/>
+                <Label fx:id="metaExpertStatus" text="Loaded" styleClass="expert-status-connected"/>
             </VBox>
 
             <!-- Spacer pushes controls to the bottom -->

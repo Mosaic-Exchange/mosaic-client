@@ -7,6 +7,7 @@ import com.mosaic.client.db.model.ChatMessage;
 import com.mosaic.client.db.model.ChatSession;
 import com.mosaic.client.service.LLMServer;
 import com.mosaic.client.service.NetworkManager;
+import com.mosaic.client.ui.screens.expert.Expert;
 
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.collections.FXCollections;
@@ -128,29 +129,29 @@ public class MainWorkspaceController {
         );
 
         // APP-MW-4 (#14): Load expert from current selections, or fall back to default Gardening Expert.
-        String[] expert = Navigator.getActiveExpert();
+        Expert expert = Navigator.getActiveExpert();
         if (expert != null) {
-            loadActiveExpert(expert[0], expert[1], expert[2], expert[3], expert[4]);
+            loadActiveExpert(expert);
         } else {
-            loadActiveExpert("Gardening Expert", "Gardening", "Local",
-                             "gardening_expert.gguf", "Connected");
+            loadActiveExpert(new Expert("Gardening Expert", "Gardening", Expert.Source.LOCAL,
+                             "gardening_expert.gguf", Expert.Status.LOADED));
         }
 
         // Disable the chat panel if the current adapter is local, and the server is unavailable.
         ReadOnlyObjectProperty<LLMServer.State> serverState = NetworkManager.getInstance().llmServerStateProperty();
         serverState.addListener(
                 (observable, oldValue, newValue) -> {
+                    Expert active = Navigator.getActiveExpert();
                     setChatPanelDisabled(
-                            (Navigator.getActiveExpert() == null ||
-                                    !Navigator.getActiveExpert()[2].equals("Remote")) &&
+                            (active == null || active.source() != Expert.Source.LOCAL) &&
                                     newValue != LLMServer.State.CONNECTED
                     );
                 }
         );
 
         // Initial state
-        setChatPanelDisabled((Navigator.getActiveExpert() == null ||
-                !Navigator.getActiveExpert()[2].equals("Remote")) &&
+        Expert active = Navigator.getActiveExpert();
+        setChatPanelDisabled((active == null || active.source() != Expert.Source.LOCAL) &&
                 serverState.get() != LLMServer.State.CONNECTED
         );
     }
@@ -162,16 +163,26 @@ public class MainWorkspaceController {
 
     // ── APP-MW-4 (#14): Expert metadata helpers ──────────────
 
-    private void loadActiveExpert(String name, String domain, String source,
-                                  String adapterFile, String status) {
-        headerExpertName.setText(name);
-        headerExpertSource.setText(source);
+    private void loadActiveExpert(Expert expert) {
+        headerExpertName.setText(expert.name());
+        headerExpertSource.setText(expert.source().toString());
         headerExpertMode.setText("Inference");
-        metaExpertName.setText(name);
-        metaExpertDomain.setText(domain);
-        metaExpertSource.setText(source);
-        metaAdapterFile.setText(adapterFile);
-        metaExpertStatus.setText(status);
+        metaExpertName.setText(expert.name());
+        metaExpertDomain.setText(expert.domain());
+        metaExpertSource.setText(expert.source().toString());
+        metaAdapterFile.setText(expert.adapterFile());
+        metaExpertStatus.setText(expert.status().toString());
+
+        // Style the status label
+        metaExpertStatus.getStyleClass().removeAll(
+                "expert-status-connected", "expert-status-disconnected", "expert-status-remote");
+        if (expert.status() == Expert.Status.LOADED) {
+            metaExpertStatus.getStyleClass().add("expert-status-connected");
+        } else if (expert.status() == Expert.Status.UNLOADED) {
+            metaExpertStatus.getStyleClass().add("expert-status-disconnected");
+        } else if (expert.status() == Expert.Status.REMOTE) {
+            metaExpertStatus.getStyleClass().add("expert-status-remote");
+        }
     }
 
     // ── AC3: Send button handler ─────────────────────────────
@@ -198,8 +209,8 @@ public class MainWorkspaceController {
 
         // Persist user message
         try {
-            String[] expert = Navigator.getActiveExpert();
-            String adapterId = (expert != null) ? expert[3] : null;
+            Expert expert = Navigator.getActiveExpert();
+            String adapterId = (expert != null) ? expert.adapterFile() : null;
             ChatMessage msg = new ChatMessage(currentSession.getSessionId(), "User", text, adapterId);
             messageDao.create(msg);
         } catch (SQLException e) {
@@ -231,8 +242,8 @@ public class MainWorkspaceController {
 
         StringBuilder responseText = new StringBuilder();
 
-        String[] expert = Navigator.getActiveExpert();
-        boolean remote = expert != null && "Remote".equals(expert[2]);
+        Expert expert = Navigator.getActiveExpert();
+        boolean remote = expert != null && expert.source() == Expert.Source.REMOTE;
 
         NetworkManager.InferenceCallback callback = new NetworkManager.InferenceCallback() {
             @Override
@@ -279,8 +290,8 @@ public class MainWorkspaceController {
     private void persistAssistantMessage(String content) {
         if (currentSession == null || content.isEmpty()) return;
         try {
-            String[] expert = Navigator.getActiveExpert();
-            String adapterId = (expert != null) ? expert[3] : null;
+            Expert expert = Navigator.getActiveExpert();
+            String adapterId = (expert != null) ? expert.adapterFile() : null;
             ChatMessage msg = new ChatMessage(
                     currentSession.getSessionId(), "Assistant", content, adapterId);
             messageDao.create(msg);

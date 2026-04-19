@@ -1,5 +1,7 @@
 package com.mosaic.client;
 
+import com.mosaic.client.ui.screens.expert.Expert;
+
 /**
  * Static navigation helper.
  * Any controller can call Navigator.showX() without holding a direct
@@ -14,7 +16,7 @@ public class Navigator {
     private static MainLayoutController mainLayout;
 
     // Currently selected expert state, shared between screens.
-    private static String[] activeExpert;
+    private static Expert activeExpert;
 
     public static void init(MainLayoutController controller) {
         mainLayout = controller;
@@ -27,19 +29,14 @@ public class Navigator {
 
     /**
      * Store the selected expert so the workspace can pick it up.
-     * @param name        expert display name
-     * @param domain      expert domain
-     * @param source      "Local" or "Remote"
-     * @param adapterFile adapter filename
-     * @param status      "Connected" or "Disconnected"
+     * @param expert the expert to set as active
      */
-    public static void setActiveExpert(String name, String domain, String source,
-                                       String adapterFile, String status) {
-        activeExpert = new String[]{ name, domain, source, adapterFile, status };
+    public static void setActiveExpert(Expert expert) {
+        activeExpert = expert;
     }
 
-    /** Returns the active expert array, or null if none has been selected yet. */
-    public static String[] getActiveExpert() {
-        return activeExpert == null ? null : activeExpert.clone();
+    /** Returns the active expert, or null if none has been selected yet. */
+    public static Expert getActiveExpert() {
+        return activeExpert;
     }
 }

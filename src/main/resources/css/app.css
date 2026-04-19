@@ -333,6 +333,13 @@
     -fx-font-weight: bold;
 }
 
+/* Status badge — remote (black) */
+.expert-status-remote {
+    -fx-text-fill: black;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
 /* ── Expert Selection screen (APP-4, #8) ────────────────── */
 
 .expert-selection-screen {

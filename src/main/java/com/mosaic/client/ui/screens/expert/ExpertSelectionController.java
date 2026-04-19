@@ -97,11 +97,11 @@ public class ExpertSelectionController {
         domainFilter.setValue("All Domains");
 
         sourceFilter.setItems(FXCollections.observableArrayList(
-                "All Sources", "Local", "Remote"));
+                "All Sources", Expert.Source.LOCAL.toString(), Expert.Source.REMOTE.toString()));
         sourceFilter.setValue("All Sources");
 
         availabilityFilter.setItems(FXCollections.observableArrayList(
-                "All", "Connected", "Disconnected"));
+                "All", Expert.Status.LOADED.toString(), Expert.Status.UNLOADED.toString()));
         availabilityFilter.setValue("All");
 
         // Wire filter change listeners
@@ -141,7 +141,8 @@ public class ExpertSelectionController {
             detailSource.setText("—");
             detailAdapter.setText("—");
             detailStatus.setText("—");
-            detailStatus.getStyleClass().removeAll("expert-status-connected", "expert-status-disconnected");
+            detailStatus.getStyleClass().removeAll(
+                    "expert-status-connected", "expert-status-disconnected", "expert-status-remote");
             confirmBtn.setDisable(true);
             downloadBtn.setDisable(true);
             return;
@@ -149,17 +150,19 @@ public class ExpertSelectionController {
 
         detailName.setText(expert.name());
         detailDomain.setText(expert.domain());
-        detailSource.setText(expert.source());
+        detailSource.setText(expert.source().toString());
         detailAdapter.setText(expert.adapterFile());
-        detailStatus.setText(expert.status());
+        detailStatus.setText(expert.status().toString());
 
         // Style the status label: keep base 'label-body', only toggle status classes
         detailStatus.getStyleClass().removeAll(
-                "expert-status-connected", "expert-status-disconnected");
-        if ("Connected".equals(expert.status())) {
+                "expert-status-connected", "expert-status-disconnected", "expert-status-remote");
+        if (expert.status() == Expert.Status.LOADED) {
             detailStatus.getStyleClass().add("expert-status-connected");
-        } else {
+        } else if (expert.status() == Expert.Status.UNLOADED) {
             detailStatus.getStyleClass().add("expert-status-disconnected");
+        } else {
+            detailStatus.getStyleClass().add("expert-status-remote");
         }
 
         confirmBtn.setDisable(false);
@@ -179,11 +182,11 @@ public class ExpertSelectionController {
                 return false;
             }
             if (source != null && !"All Sources".equals(source)
-                    && !expert.source().equals(source)) {
+                    && !expert.source().toString().equals(source)) {
                 return false;
             }
             if (availability != null && !"All".equals(availability)
-                    && !expert.status().equals(availability)) {
+                    && !expert.status().toString().equals(availability)) {
                 return false;
             }
             return true;
@@ -198,12 +201,7 @@ public class ExpertSelectionController {
     @FXML
     private void onConfirm() {
         if (selectedExpert != null) {
-            Navigator.setActiveExpert(
-                    selectedExpert.name(),
-                    selectedExpert.domain(),
-                    selectedExpert.source(),
-                    selectedExpert.adapterFile(),
-                    selectedExpert.status());
+            Navigator.setActiveExpert(selectedExpert);
         }
         Navigator.showWorkspace();
     }
@@ -212,7 +210,7 @@ public class ExpertSelectionController {
 
     @FXML
     private void onDownload() {
-        if (selectedExpert == null || !"Remote".equals(selectedExpert.source())) {
+        if (selectedExpert == null || selectedExpert.source() != Expert.Source.REMOTE) {
             new Alert(Alert.AlertType.INFORMATION, "Select a remote expert to download.",
                     ButtonType.OK).showAndWait();
             return;
@@ -298,7 +296,7 @@ public class ExpertSelectionController {
         // Remove the current local adapters
         allExperts.removeAll(
                 allExperts.stream()
-                        .filter(e -> { return Objects.equals(e.source, "Local"); })
+                        .filter(e -> e.source() == Expert.Source.LOCAL)
                         .toList()
         );
 
@@ -314,9 +312,9 @@ public class ExpertSelectionController {
                                         new Expert(
                                                 metadata.name(),
                                                 metadata.domain(),
-                                                "Local",
+                                                Expert.Source.LOCAL,
                                                 dir.getFileName().toString(),
-                                                "Available"
+                                                Expert.Status.LOADED
                                         )
                                 );
                             };
@@ -343,10 +341,7 @@ public class ExpertSelectionController {
                 if (item.isEmpty()) continue;
                 int colon = item.lastIndexOf(':');
                 String name = colon > 0 ? item.substring(0, colon) : item;
-                // Derive a display name from the filename
-                String displayName = name.replace('_', ' ')
-                        .replaceAll("\\.[^.]+$", ""); // strip extension
-                allExperts.add(new Expert(displayName, "Remote", "Remote", name, "Connected"));
+                allExperts.add(new Expert("(Unknown)", "(Unknown)", Expert.Source.REMOTE, name, Expert.Status.REMOTE));
             }
         }
     }
@@ -425,15 +420,5 @@ public class ExpertSelectionController {
             }
         }
         return targetDir;
-    }
-
-    // ── Inner record for expert data ─────────────────────────
-
-    /**
-     * Lightweight record representing an expert entry.
-     * Fields mirror the Local_Adapters schema + runtime status.
-     */
-    record Expert(String name, String domain, String source,
-                  String adapterFile, String status) {
     }
 }
