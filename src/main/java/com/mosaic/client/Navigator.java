@@ -1,5 +1,8 @@
 package com.mosaic.client;
 
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import com.mosaic.client.ui.screens.expert.Expert;
 
 /**
@@ -16,7 +19,7 @@ public class Navigator {
     private static MainLayoutController mainLayout;
 
     // Currently selected expert state, shared between screens.
-    private static Expert activeExpert;
+    private static final ObjectProperty<Expert> activeExpert = new SimpleObjectProperty<>();
 
     public static void init(MainLayoutController controller) {
         mainLayout = controller;
@@ -32,11 +35,15 @@ public class Navigator {
      * @param expert the expert to set as active
      */
     public static void setActiveExpert(Expert expert) {
-        activeExpert = expert;
+        activeExpert.set(expert);
     }
 
     /** Returns the active expert, or null if none has been selected yet. */
     public static Expert getActiveExpert() {
+        return activeExpert.get();
+    }
+
+    public static ReadOnlyObjectProperty<Expert> activeExpertProperty() {
         return activeExpert;
     }
 }

@@ -4,6 +4,8 @@ import com.mosaic.client.Navigator;
 import com.mosaic.client.service.AdapterMetadata;
 import com.mosaic.client.service.NetworkManager;
 import javafx.application.Platform;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -59,7 +61,7 @@ public class ExpertSelectionController {
     @FXML private ProgressBar downloadProgress;
 
     /** Currently selected expert. */
-    private Expert selectedExpert;
+    private final ObjectProperty<Expert> selectedExpert = new SimpleObjectProperty<>();
 
     /** Master (unfiltered) list of experts. */
     private ObservableList<Expert> allExperts;
@@ -122,52 +124,36 @@ public class ExpertSelectionController {
                 if (empty || item == null) {
                     setText(null);
                 } else {
-                    setText(item.name() + "  ·  " + item.domain());
+                    setText(item.getName() + "  ·  " + item.getDomain());
                 }
             }
         });
 
         // ── AC3: Selection listener updates detail panel ─────
-        expertListView.getSelectionModel().selectedItemProperty().addListener(
-                (obs, oldVal, newVal) -> onExpertSelected(newVal));
-    }
+        // Bind ListView selection to the selectedExpert property
+        selectedExpert.bind(expertListView.getSelectionModel().selectedItemProperty());
 
-    // ── AC3: Update detail panel ─────────────────────────────
+        // Bind Detail Panel Labels using flatMap
+        detailName.textProperty().bind(selectedExpert.flatMap(Expert::nameProperty).orElse("—"));
+        detailDomain.textProperty().bind(selectedExpert.flatMap(Expert::domainProperty).orElse("—"));
+        detailSource.textProperty().bind(selectedExpert.flatMap(Expert::sourceProperty).map(Object::toString).orElse("—"));
+        detailAdapter.textProperty().bind(selectedExpert.flatMap(Expert::adapterFileProperty).orElse("—"));
+        detailStatus.textProperty().bind(selectedExpert.flatMap(Expert::statusProperty).map(Object::toString).orElse("—"));
 
-    private void onExpertSelected(Expert expert) {
-        selectedExpert = expert;
-        if (expert == null) {
-            detailName.setText("—");
-            detailDomain.setText("—");
-            detailSource.setText("—");
-            detailAdapter.setText("—");
-            detailStatus.setText("—");
-            detailStatus.getStyleClass().removeAll(
-                    "expert-status-connected", "expert-status-disconnected", "expert-status-remote");
-            confirmBtn.setDisable(true);
-            downloadBtn.setDisable(true);
-            return;
-        }
+        // Reactive styling for the status label
+        selectedExpert.flatMap(Expert::statusProperty).addListener((obs, oldStatus, newStatus) -> {
+            detailStatus.getStyleClass().removeAll("expert-status-connected", "expert-status-disconnected", "expert-status-remote");
+            if (newStatus == Expert.Status.LOADED) {
+                detailStatus.getStyleClass().add("expert-status-connected");
+            } else if (newStatus == Expert.Status.UNLOADED) {
+                detailStatus.getStyleClass().add("expert-status-disconnected");
+            } else if (newStatus == Expert.Status.REMOTE) {
+                detailStatus.getStyleClass().add("expert-status-remote");
+            }
+        });
 
-        detailName.setText(expert.name());
-        detailDomain.setText(expert.domain());
-        detailSource.setText(expert.source().toString());
-        detailAdapter.setText(expert.adapterFile());
-        detailStatus.setText(expert.status().toString());
-
-        // Style the status label: keep base 'label-body', only toggle status classes
-        detailStatus.getStyleClass().removeAll(
-                "expert-status-connected", "expert-status-disconnected", "expert-status-remote");
-        if (expert.status() == Expert.Status.LOADED) {
-            detailStatus.getStyleClass().add("expert-status-connected");
-        } else if (expert.status() == Expert.Status.UNLOADED) {
-            detailStatus.getStyleClass().add("expert-status-disconnected");
-        } else {
-            detailStatus.getStyleClass().add("expert-status-remote");
-        }
-
-        confirmBtn.setDisable(false);
-        downloadBtn.setDisable(false);
+        confirmBtn.disableProperty().bind(selectedExpert.isNull());
+        downloadBtn.disableProperty().bind(selectedExpert.isNull());
     }
 
     // ── AC1: Filter logic ────────────────────────────────────
@@ -179,15 +165,15 @@ public class ExpertSelectionController {
 
         filteredExperts.setPredicate(expert -> {
             if (domain != null && !"All Domains".equals(domain)
-                    && !expert.domain().equals(domain)) {
+                    && !expert.getDomain().equals(domain)) {
                 return false;
             }
             if (source != null && !"All Sources".equals(source)
-                    && !expert.source().toString().equals(source)) {
+                    && !expert.getSource().toString().equals(source)) {
                 return false;
             }
             if (availability != null && !"All".equals(availability)
-                    && !expert.status().toString().equals(availability)) {
+                    && !expert.getStatus().toString().equals(availability)) {
                 return false;
             }
             return true;
@@ -201,14 +187,15 @@ public class ExpertSelectionController {
 
     @FXML
     private void onConfirm() {
-        if (selectedExpert != null) {
-            Navigator.setActiveExpert(selectedExpert);
+        Expert currentSelected = selectedExpert.get();
+        if (currentSelected != null) {
+            Navigator.setActiveExpert(currentSelected);
 
             // TODO surround with if (unloaded)
             confirmBtn.getScene().getRoot().setDisable(true);
 
             NetworkManager.getInstance().registerAdapter(
-                    NetworkManager.getInstance().getAdaptersDir().resolve(selectedExpert.adapterFile()),
+                    NetworkManager.getInstance().getAdaptersDir().resolve(currentSelected.getAdapterFile()),
                     response -> {
                         confirmBtn.getScene().getRoot().setDisable(false);
                         if (response.error().isPresent()) {
@@ -231,7 +218,8 @@ public class ExpertSelectionController {
 
     @FXML
     private void onDownload() {
-        if (selectedExpert == null || selectedExpert.source() != Expert.Source.REMOTE) {
+        Expert currentSelected = selectedExpert.get();
+        if (currentSelected == null || currentSelected.getSource() != Expert.Source.REMOTE) {
             new Alert(Alert.AlertType.INFORMATION, "Select a remote expert to download.",
                     ButtonType.OK).showAndWait();
             return;
@@ -242,7 +230,7 @@ public class ExpertSelectionController {
             return;
         }
 
-        String adapterName = selectedExpert.adapterFile();
+        String adapterName = currentSelected.getAdapterFile();
         downloadBtn.setDisable(true);
         downloadBtn.setText("Downloading…");
         if (downloadProgress != null) {
@@ -288,7 +276,7 @@ public class ExpertSelectionController {
 
     private void resetDownloadButton() {
         downloadBtn.setText("Download");
-        downloadBtn.setDisable(selectedExpert == null);
+        downloadBtn.setDisable(selectedExpert.get() == null);
         if (downloadProgress != null) {
             downloadProgress.setVisible(false);
         }
@@ -317,7 +305,7 @@ public class ExpertSelectionController {
         // Remove the current local adapters
         allExperts.removeAll(
                 allExperts.stream()
-                        .filter(e -> e.source() == Expert.Source.LOCAL)
+                        .filter(e -> e.getSource() == Expert.Source.LOCAL)
                         .toList()
         );
 
