@@ -17,6 +17,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class LLMServer {
@@ -75,6 +76,9 @@ public class LLMServer {
     private URI baseUri;
     private int lastId = 0;
     private boolean processing = false;  // Lock on requests
+
+    // Counter for unique request IDs, do not access directly (use getRequestId()).
+    private final AtomicInteger requestIdCounter = new AtomicInteger(0);
 
     private LLMServer() throws URISyntaxException { }
 
@@ -182,6 +186,67 @@ public class LLMServer {
     private void ensureNoConcurrentRequest() throws IllegalCallerException {
         if (this.processing) {
             throw new IllegalCallerException("Only one request can be sent to the AI server at a time.");
+        }
+    }
+
+    private synchronized int getRequestIdCounter() {
+        return requestIdCounter.getAndIncrement();
+    }
+
+    public record AdapterResponse(
+            String adapterId,
+            String adapterFilename,
+            Optional<String> error
+    ) {}
+
+    public final AdapterResponse addAdapter(String adapterDir) {
+        if (!running()) {
+            return new AdapterResponse(null, null, Optional.of("Server not running"));
+        }
+
+        ensureHttpClient();
+        ensureNoConcurrentRequest();
+
+        processing = true;
+        try {
+            URI target = this.baseUri.resolve(apiSpec.get(APIOperation.ADD_ADAPTER));
+            JSONObject requestBody = new JSONObject();
+            requestBody.put("adapter_dir", adapterDir);
+            requestBody.put("request_id", getRequestIdCounter());
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(target)
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
+                    .header("Accept", "application/json")
+                    .header("Content-Type", "application/json")
+                    .version(HttpClient.Version.HTTP_1_1)
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() != 200) {
+                System.getLogger("AIServer.addAdapter").log(
+                        System.Logger.Level.ERROR,
+                        "Middleware server addAdapter returned bad HTTP status (%s). Body: %s"
+                                .formatted(response.statusCode(), response.body())
+                );
+                return new AdapterResponse(null, null, Optional.of("HTTP " + response.statusCode()));
+            }
+
+            JSONObject responseBody = new JSONObject(response.body());
+            return new AdapterResponse(
+                    responseBody.getString("adapter_id"),
+                    responseBody.getString("adapter_filename"),
+                    Optional.empty()
+            );
+        } catch (Exception e) {
+            System.getLogger("AIServer.addAdapter").log(
+                    System.Logger.Level.ERROR,
+                    "Error sending request to middleware server (%s).".formatted(e)
+            );
+            return new AdapterResponse(null, null, Optional.of(e.toString()));
+        } finally {
+            processing = false;
         }
     }
 
