@@ -9,7 +9,6 @@ import com.mosaic.client.service.LLMServer;
 import com.mosaic.client.service.NetworkManager;
 import com.mosaic.client.ui.screens.expert.Expert;
 
-import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -158,7 +157,7 @@ public class MainWorkspaceController {
 
         if (activeExpert.get() == null) {
             Navigator.setActiveExpert(new Expert("Gardening Expert", "Gardening", Expert.Source.LOCAL,
-                    "gardening_expert.gguf", Expert.Status.LOADED));
+                    "gardening_expert.gguf"));
         }
 
         // Disable the chat panel if the current adapter is local, and the server is unavailable.

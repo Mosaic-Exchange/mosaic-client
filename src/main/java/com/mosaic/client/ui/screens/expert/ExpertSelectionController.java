@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * Controller for the Expert Selection screen.
@@ -191,27 +190,35 @@ public class ExpertSelectionController {
         if (currentSelected != null) {
             Navigator.setActiveExpert(currentSelected);
 
-            // TODO surround with if (unloaded)
-            confirmBtn.getScene().getRoot().setDisable(true);
-
-            NetworkManager.getInstance().registerAdapter(
-                    NetworkManager.getInstance().getAdaptersDir().resolve(currentSelected.getAdapterFile()),
-                    response -> {
-                        confirmBtn.getScene().getRoot().setDisable(false);
-                        if (response.error().isPresent()) {
-                            Platform.runLater(() -> { new Alert(Alert.AlertType.ERROR, "Failed to register adapter: " + response.error().get()).showAndWait(); });
-                            return;
-                        }
-                        Platform.runLater(() -> { new Alert(Alert.AlertType.INFORMATION, "Registered adapter with response: " + response).showAndWait(); });
-                    },
-                    throwable -> {
-                        confirmBtn.getScene().getRoot().setDisable(false);
-                        Platform.runLater(() -> { new Alert(Alert.AlertType.ERROR, "Error during adapter registration: " + throwable.getMessage()).showAndWait(); });
-                    }
-            );
+            if (!currentSelected.isRemote() && !currentSelected.isLoaded()) {
+                loadAdapter(currentSelected);
+            }
         } else {
             Navigator.showWorkspace();
         }
+    }
+
+    private void loadAdapter(Expert currentSelected) {
+        confirmBtn.getScene().getRoot().setDisable(true);
+
+        NetworkManager.getInstance().registerAdapter(
+                NetworkManager.getInstance().getAdaptersDir().resolve(currentSelected.getAdapterFile()),
+                response -> {
+                    confirmBtn.getScene().getRoot().setDisable(false);
+                    if (response.error().isPresent()) {
+                        Platform.runLater(() -> { new Alert(Alert.AlertType.ERROR, "Failed to register adapter: " + response.error().get()).showAndWait(); });
+                        return;
+                    }
+                    System.getLogger("ExpertSelectionController").log(System.Logger.Level.INFO,
+                            "Registered adapter with response: " + response);
+                    currentSelected.load(response.adapterId());
+                },
+                throwable -> {
+                    confirmBtn.getScene().getRoot().setDisable(false);
+                    Platform.runLater(() -> { new Alert(Alert.AlertType.ERROR, "Error during adapter registration: " + throwable.getMessage()).showAndWait(); });
+                    currentSelected.unload();
+                }
+        );
     }
 
     // ── AC5: Download adapter from remote peer ────────────────
@@ -322,8 +329,7 @@ public class ExpertSelectionController {
                                                 metadata.name(),
                                                 metadata.domain(),
                                                 Expert.Source.LOCAL,
-                                                dir.getFileName().toString(),
-                                                Expert.Status.LOADED
+                                                dir.getFileName().toString()
                                         )
                                 );
                             };
@@ -350,7 +356,7 @@ public class ExpertSelectionController {
                 if (item.isEmpty()) continue;
                 int colon = item.lastIndexOf(':');
                 String name = colon > 0 ? item.substring(0, colon) : item;
-                allExperts.add(new Expert("(Unknown)", "(Unknown)", Expert.Source.REMOTE, name, Expert.Status.REMOTE));
+                allExperts.add(new Expert("(Unknown)", "(Unknown)", Expert.Source.REMOTE, name));
             }
         }
     }
