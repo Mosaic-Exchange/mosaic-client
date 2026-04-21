@@ -24,7 +24,7 @@ public class AppConfig {
     @JsonIgnore
     private static String activeConfigFilename;
 
-    private int port = 7000;
+    private int port = 7001;
     private int llmServerPort = 4000;
     private String nodeType = "basic";
     private String seed = "";
@@ -119,7 +119,6 @@ public class AppConfig {
      * Returns defaults if the file is missing or unreadable.
      */
     public static AppConfig load(String filename) {
-        System.out.println("[config] DEBUG — load() v2 called");
         Path path = configPath(filename);
         AppConfig config = new AppConfig();
 
@@ -136,7 +135,6 @@ public class AppConfig {
             return new AppConfig();
         }
 
-        // normalize nulls — tools.jackson writes fields directly, bypassing setters
         if (config.seed == null)     config.seed = "";
         if (config.nodeType == null) config.nodeType = "basic";
         if (config.dataDir == null)  config.dataDir = System.getProperty("user.home") + "/.mosaic";
@@ -173,7 +171,7 @@ public class AppConfig {
                 # Lives next to the runnable jar (or project root in dev).
 
                 # Network port this node listens on
-                port: 7000
+                port: 7001
 
                 # Network port for the local LLM server (middleware)
                 llm-server-port: 4000
@@ -198,7 +196,6 @@ public class AppConfig {
             Files.writeString(path, content);
             System.out.println("[config] Created default " + filename);
         } catch (IOException e) {
-            // Non-fatal — the app works fine without the file
             System.err.println("[config] Could not write default " + filename + ": " + e.getMessage());
         }
     }
@@ -228,8 +225,8 @@ public class AppConfig {
             int p = Integer.parseInt(s);
             if (p > 0 && p <= 65535) return p;
         } catch (NumberFormatException ignored) {}
-        System.err.println("[config] Invalid port '" + s + "', using 7000");
-        return 7000;
+        System.err.println("[config] Invalid port '" + s + "', using 7001");
+        return 7001;
     }
 
     private static boolean parseBoolean(String s) {

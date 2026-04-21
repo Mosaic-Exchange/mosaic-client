@@ -11,6 +11,7 @@ import javafx.stage.DirectoryChooser;
 import com.mosaic.client.AppConfig;
 import com.mosaic.client.Navigator;
 import com.mosaic.client.service.NetworkManager;
+import javafx.application.Platform;
 
 import java.io.File;
 import java.io.IOException;
@@ -74,6 +75,7 @@ public class SettingsController {
         errorLabel.setVisible(false);
  
         updateNetworkStatus();
+        Platform.runLater(() -> portField.getScene().getRoot().requestFocus());
 
     }
 
