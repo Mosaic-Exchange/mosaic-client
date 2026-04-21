@@ -22,7 +22,6 @@ public class AppConfig {
     private int llmServerPort = 4000;
     private String nodeType = "basic";
     private String seed = "";
-    private String debugFile = "mosaic-debug.txt";
     private boolean debugEnabled = false;
     private String dataDir = System.getProperty("user.home") + "/.mosaic";
 
@@ -122,7 +121,6 @@ public class AppConfig {
                     case "llm-server-port" -> config.llmServerPort = parsePort(value);
                     case "node-type"       -> config.nodeType = value;
                     case "seed"            -> config.seed = value;
-                    case "debug-file"      -> config.debugFile = value;
                     case "debug-enabled"   -> config.debugEnabled = parseBoolean(value);
                     case "data-dir"        -> config.dataDir = value;
                 }
@@ -157,7 +155,7 @@ public class AppConfig {
         Path path = configPath(filename);
         if (Files.exists(path)) return;
 
-                String content = """
+        String content = """
                 # Mosaic configuration
                 # Lives next to the runnable jar (or project root in dev).
 
@@ -206,7 +204,6 @@ public class AppConfig {
     public int llmServerPort()    { return llmServerPort; }
     public String nodeType()      { return nodeType; }
     public String seed()          { return seed; }
-    public String debugFile()     { return debugFile; }
     public boolean debugEnabled() { return debugEnabled; }
     public Path dataDir()         { return Path.of(dataDir); }
     public Path logDir()          { return dataDir().resolve("logs"); }
