@@ -9,9 +9,7 @@
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Separator?>
-<?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
-<?import javafx.scene.control.ToggleButton?>
 
 <!--
     Settings screen — structural placeholder.
@@ -38,78 +36,80 @@
                 <!-- Page title -->
                 <Label text="Settings" style="-fx-font-size: 22px; -fx-font-weight: bold;"/>
 
-                <!-- ── Section 1: Privacy & Sharing ── -->
-                <VBox spacing="12" styleClass="settings-section">
-                    <Label text="Privacy &amp; Sharing" styleClass="section-title"/>
-                    <Separator/>
+                <!-- Error label -->
+                <Label fx:id="errorLabel" wrapText="true"
+                       style="-fx-text-fill: #f44336; -fx-font-size: 13px;"/>
 
-                    <HBox alignment="CENTER_LEFT" spacing="16">
-                        <ToggleButton fx:id="shareAnonymousDataToggle" mnemonicParsing="false" text="Off"/>
-                        <VBox spacing="2">
-                            <Label text="Share anonymous usage data"/>
-                            <Label text="Helps improve the app. No personal data is collected."
-                                   styleClass="hint-label"/>
-                        </VBox>
-                    </HBox>
-
-                    <HBox alignment="CENTER_LEFT" spacing="16">
-                        <ToggleButton fx:id="localOnlyModeToggle" mnemonicParsing="false" text="Off"/>
-                        <VBox spacing="2">
-                            <Label text="Local-only mode"/>
-                            <Label text="Disables all outbound network connections."
-                                   styleClass="hint-label"/>
-                        </VBox>
-                    </HBox>
-                </VBox>
-
-                <!-- ── Section 2: Network Configuration ── -->
+                <!-- ── Network Configuration ── -->
                 <VBox spacing="12" styleClass="settings-section">
                     <Label text="Network Configuration" styleClass="section-title"/>
                     <Separator/>
 
+                    <!-- ── Status ── -->
                     <HBox alignment="CENTER_LEFT" spacing="12">
-                        <Label text="Status" minWidth="140"/>
+                        <Label text="Status" minWidth="160"/>
                         <Label fx:id="networkStatusLabel" text="Unknown"/>
                     </HBox>
 
+                    <!-- ── Port Field ── -->
                     <HBox alignment="CENTER_LEFT" spacing="12">
-                        <Label text="Network mode" minWidth="140"/>
-                        <ComboBox fx:id="networkModeCombo" prefWidth="200"/>
+                        <Label text="Port" minWidth="160"/>
+                        <VBox spacing="2">
+                            <TextField fx:id="portField" prefWidth="120" promptText="e.g. 7000"/>
+                            <Label text="The port this node listens on (0–65535)." styleClass="hint-label"/>
+                        </VBox>
                     </HBox>
 
+                     <!-- ── LLM Server Port ── -->
                     <HBox alignment="CENTER_LEFT" spacing="12">
-                        <Label text="Port" minWidth="140"/>
-                        <TextField fx:id="networkPortField" prefWidth="100" promptText="7000"/>
+                        <Label text="LLM Server Port" minWidth="160"/>
+                        <VBox spacing="2">
+                            <TextField fx:id="llmServerPortField" prefWidth="120" promptText="e.g. 4000"/>
+                            <Label text="Port for the local LLM middleware server (0–65535)." styleClass="hint-label"/>
+                        </VBox>
                     </HBox>
 
-                    <VBox spacing="4">
-                        <Label text="Bootstrap nodes"/>
-                        <Label text="One address per line or comma-separated (host:port). Leave empty to auto-seed."
-                               styleClass="hint-label"/>
-                        <TextArea fx:id="bootstrapNodesArea"
-                                  prefRowCount="4"
-                                  wrapText="true"/>
-                    </VBox>
+                    <!-- ── Node Type ── -->
+                    <HBox alignment="CENTER_LEFT" spacing="12">
+                        <Label text="Node Type" minWidth="160"/>
+                        <VBox spacing="2">
+                            <ComboBox fx:id="nodeTypeCombo" prefWidth="160"/>
+                            <Label text="basic = normal node, seed = bootstrap node, master = coordinator." styleClass="hint-label"/>
+                        </VBox>
+                    </HBox>
+
+                    <!-- ── Seed Address ── -->
+                    <HBox alignment="CENTER_LEFT" spacing="12">
+                        <Label text="Seed Address" minWidth="160"/>
+                        <VBox spacing="2">
+                            <TextField fx:id="seedField" prefWidth="240" promptText="e.g. 127.0.0.1:7001"/>
+                            <Label text="Required when Node Type is &quot;seed&quot;. Format: ip:port" styleClass="hint-label"/>
+                        </VBox>
+                    </HBox>
+
                 </VBox>
 
-                <!-- ── Section 3: Adapter Management ── -->
+                <!-- ── Debug & Storage ── -->
                 <VBox spacing="12" styleClass="settings-section">
-                    <Label text="Adapter Management" styleClass="section-title"/>
+                    <Label text="Debug &amp; Storage" styleClass="section-title"/>
                     <Separator/>
 
-                    <Label text="Enabled adapters"/>
-                    <CheckBox fx:id="bluetoothAdapterCheck" text="Bluetooth"/>
-                    <CheckBox fx:id="wifiAdapterCheck"      text="Wi-Fi"/>
-                    <CheckBox fx:id="ethernetAdapterCheck"  text="Ethernet"/>
+                    <!-- ── Checkbox for debugEnabled ── -->
+                    <CheckBox fx:id="debugEnabledCheck" text="Enable debug snapshots"/>
+                    <Label text="Periodically writes a debug snapshot file while the node is running." styleClass="hint-label"/>
 
-                    <Separator/>
-
-                    <Label text="Custom adapter"/>
-                    <HBox spacing="8" alignment="CENTER_LEFT">
-                        <TextField fx:id="customAdapterField" prefWidth="260"/>
-                        <Button text="Add"    onAction="#onAddAdapter"    mnemonicParsing="false"/>
-                        <Button text="Remove" onAction="#onRemoveAdapter" mnemonicParsing="false"/>
+                    <!-- ── Data Directory Field & Browse Button ── -->
+                    <HBox alignment="CENTER_LEFT" spacing="12">
+                        <Label text="Data Directory" minWidth="160"/>
+                        <VBox spacing="2">
+                            <HBox spacing="8" alignment="CENTER_LEFT">
+                                <TextField fx:id="dataDirField" prefWidth="300"/>
+                                <Button fx:id="browseDirBtn" text="Browse…" mnemonicParsing="false"/>
+                            </HBox>
+                            <Label text="Where the database and adapters are stored." styleClass="hint-label"/>
+                        </VBox>
                     </HBox>
+
                 </VBox>
 
                 <!-- ── Save / Cancel ── -->

@@ -5,7 +5,11 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.dataformat.yaml.YAMLFactory;
 
 /**
  * Application configuration loaded from a YAML-style file ({@code mosaic.yml})
@@ -14,8 +18,10 @@ import java.util.List;
  * <p>Format is simple key-value pairs ({@code key: value}), one per line.
  * Lines starting with {@code #} are comments. Blank lines are ignored.
  */
-public class AppConfig {
 
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+public class AppConfig {
+    @JsonIgnore
     private static String activeConfigFilename;
 
     private int port = 7000;
@@ -27,6 +33,23 @@ public class AppConfig {
     private String dataDir = System.getProperty("user.home") + "/.mosaic";
 
     private AppConfig() {}
+
+    /**
+     * Writes the current config back to the active config file (mosaic.yml).
+     * Call this whenever the user saves settings.
+     */
+    public void save() throws IOException {
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        mapper.writeValue(configPath().toFile(), this);
+        System.out.println("[config] Saved settings to " + configPath());
+    }
+
+    public void setPort(int port)                 { this.port = port; }
+    public void setLlmServerPort(int port)        { this.llmServerPort = port; }
+    public void setNodeType(String nodeType)      { this.nodeType = nodeType; }
+    public void setSeed(String seed)              { this.seed = seed; }
+    public void setDebugEnabled(boolean enabled)  { this.debugEnabled = enabled; }
+    public void setDataDir(String dataDir)        { this.dataDir = dataDir; }
 
     /**
      * Sets the configuration file name to use globally (e.g. {@code mosaic.yml}).
@@ -106,33 +129,14 @@ public class AppConfig {
         }
 
         try {
-            List<String> lines = Files.readAllLines(path);
-            for (String raw : lines) {
-                String line = raw.trim();
-                if (line.isEmpty() || line.startsWith("#")) continue;
-
-                int colon = line.indexOf(':');
-                if (colon < 0) continue;
-
-                String key = line.substring(0, colon).trim().toLowerCase();
-                String value = line.substring(colon + 1).trim();
-
-                switch (key) {
-                    case "port"            -> config.port = parsePort(value);
-                    case "llm-server-port" -> config.llmServerPort = parsePort(value);
-                    case "node-type"       -> config.nodeType = value;
-                    case "seed"            -> config.seed = value;
-                    case "debug-file"      -> config.debugFile = value;
-                    case "debug-enabled"   -> config.debugEnabled = parseBoolean(value);
-                    case "data-dir"        -> config.dataDir = value;
-                }
-            }
+            ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+            config = mapper.readValue(path.toFile(), AppConfig.class);
             System.out.println("[config] Loaded " + filename + " — port=" + config.port
-                    + " llm-port=" + config.llmServerPort
-                    + " type=" + config.nodeType
-                    + " seed=" + (config.seed.isEmpty() ? "(none)" : config.seed)
-                    + " debug=" + config.debugEnabled
-                    + " data-dir=" + config.dataDir);
+                + " llm-port=" + config.llmServerPort
+                + " type=" + config.nodeType
+                + " seed=" + (config.seed.isEmpty() ? "(none)" : config.seed)
+                + " debug=" + config.debugEnabled
+                + " data-dir=" + config.dataDir);
         } catch (IOException e) {
             System.err.println("[config] Failed to read " + filename + ": " + e.getMessage());
         }
