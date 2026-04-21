@@ -1,15 +1,12 @@
 package com.mosaic.client.db.model;
 
-/**
- * Represents a locally available adapter (maps to the Local_Adapters table).
- */
 public class Adapter {
 
-    private String adapterId;   // UUID string
+    private String adapterId;
     private String name;
     private String domain;
     private String filePath;
-    private String fileHash;    // SHA-256
+    private String fileHash;
     private int sizeMb;
 
     public Adapter() {}

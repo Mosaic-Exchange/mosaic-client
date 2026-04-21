@@ -1,5 +1,6 @@
 package com.mosaic.client.db;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -9,13 +10,13 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 /**
- * Manages the SQLite database connection and schema initialization.
- * The database file is stored at {@code <user.home>/.mosaic/mosaic.db}.
+ * Owns the client's SQLite connection and creates the schema on first use.
  */
 public class DatabaseManager {
 
     private static final String DB_DIR = System.getProperty("user.home") + "/.mosaic";
     private static final String DB_URL = "jdbc:sqlite:" + DB_DIR + "/mosaic.db";
+    private static final System.Logger LOGGER = System.getLogger(DatabaseManager.class.getName());
 
     private static DatabaseManager instance;
     private Connection connection;
@@ -29,23 +30,19 @@ public class DatabaseManager {
         return instance;
     }
 
-    /**
-     * Opens the database connection and creates tables if they do not exist.
-     */
     public void initialize() throws SQLException {
         try {
             Path dir = Paths.get(DB_DIR);
             if (!Files.exists(dir)) {
                 Files.createDirectories(dir);
             }
-        } catch (Exception e) {
-            throw new SQLException("Failed to create database directory: " + e.getMessage(), e);
+        } catch (IOException e) {
+            throw new SQLException("Failed to create database directory: " + DB_DIR, e);
         }
 
         connection = DriverManager.getConnection(DB_URL);
         connection.setAutoCommit(true);
 
-        // Enable WAL mode for better concurrent read performance
         try (Statement stmt = connection.createStatement()) {
             stmt.execute("PRAGMA journal_mode=WAL");
             stmt.execute("PRAGMA foreign_keys=ON");
@@ -98,15 +95,14 @@ public class DatabaseManager {
         return connection;
     }
 
-    /**
-     * Closes the database connection. Call on application shutdown.
-     */
     public void shutdown() {
         if (connection != null) {
             try {
                 connection.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                LOGGER.log(System.Logger.Level.WARNING, "Failed to close database connection.", e);
+            } finally {
+                connection = null;
             }
         }
     }

@@ -2,17 +2,14 @@ package com.mosaic.client.db.model;
 
 import java.time.LocalDateTime;
 
-/**
- * Represents a single chat message (maps to the Chat_History table).
- */
 public class ChatMessage {
 
     private int msgId;
     private int sessionId;
     private LocalDateTime timestamp;
-    private String role;      // "User" or "Assistant"
+    private String role;
     private String content;
-    private String usedAdapter;  // adapter_id (UUID string), nullable
+    private String usedAdapter;
 
     public ChatMessage() {}
 
