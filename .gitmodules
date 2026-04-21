@@ -7,4 +7,4 @@
 [submodule "llm-server"]
     path = llm-server
     url = git@github.com:Mosaic-Exchange/llm-server.git
-	branch = add-dependency-to-pipfile
+	branch = develop
