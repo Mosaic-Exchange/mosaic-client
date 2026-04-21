@@ -1,8 +1,5 @@
 package com.mosaic.client.db.model;
 
-/**
- * Represents a chat session (maps to the Chat_Session table).
- */
 public class ChatSession {
 
     private int sessionId;
