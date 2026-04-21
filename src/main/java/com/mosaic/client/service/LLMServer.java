@@ -58,14 +58,16 @@ public class LLMServer {
         ADD_ADAPTER,
         LIST_ADAPTERS,
         REMOVE_ADAPTER,
-        HEALTH_CHECK
+        HEALTH_CHECK,
+        SHUTDOWN
     }
     private final Map<APIOperation, URI> apiSpec = Map.of(
             APIOperation.GENERATE, new URI("v1/generations"),
             APIOperation.ADD_ADAPTER, new URI("v1/adapters"),
             APIOperation.LIST_ADAPTERS, new URI("v1/adapters"),
             APIOperation.REMOVE_ADAPTER, new URI("v1/adapters"),
-            APIOperation.HEALTH_CHECK, new URI("health")
+            APIOperation.HEALTH_CHECK, new URI("health"),
+            APIOperation.SHUTDOWN, new URI("shutdown")
     );
 
     // Process management
@@ -171,11 +173,38 @@ public class LLMServer {
     }
 
     public void stop() {
+        if (!running()) return;
+
+        System.getLogger("AIServer").log(
+                System.Logger.Level.INFO,
+                "Stopping AI server at %s:%d. Logs can be found in %s.".formatted(host, port, logFile.toString())
+        );
+
+        if (healthMonitor != null) {
+            healthMonitor.cancel();
+            healthMonitor = null;
+        }
+
+        try {
+            ensureHttpClient();
+            URI target = baseUri.resolve(apiSpec.get(APIOperation.SHUTDOWN));
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(target)
+                    .POST(HttpRequest.BodyPublishers.noBody())
+                    .version(HttpClient.Version.HTTP_1_1)
+                    .build();
+            httpClient.send(req, HttpResponse.BodyHandlers.discarding());
+        } catch (Exception ignored) {
+            // Server may already be down; fall through to force-kill
+        }
+
+        try {
+            proc.waitFor(5, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         if (running()) {
-            System.getLogger("AIServer").log(
-                    System.Logger.Level.INFO,
-                    "Stopping AI server at %s:%d. Logs can be found in %s.".formatted(host, port, logFile.toString())
-            );
             proc.destroy();
         }
     }
