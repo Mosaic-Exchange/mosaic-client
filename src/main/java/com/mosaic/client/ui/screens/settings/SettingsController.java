@@ -129,6 +129,7 @@ public class SettingsController {
      */
     private boolean validateAndApply() {
 
+        AppConfig current = AppConfig.load();
         StringBuilder errors = new StringBuilder();
         // ── port ──────────────────────────────────────────────
         int port = -1;
@@ -156,18 +157,16 @@ public class SettingsController {
 
         // ── port availability ─────────────────────────────────
         // Only check if the values parsed successfully
-        if (port != -1 && !isPortAvailable(port)) {
+        if (port != -1 && port != current.port() && !isPortAvailable(port)) {
             errors.append("• Port ").append(port).append(" is already in use by another process.\n");
         }
-        if (llmPort != -1 && !isPortAvailable(llmPort)) {
+        if (llmPort != -1 && llmPort != current.llmServerPort() && !isPortAvailable(llmPort)) {
             errors.append("• LLM Server Port ").append(llmPort).append(" is already in use by another process.\n");
         }
 
         // ── seed ───────────────────────────────────────────────
         String seed = seedField.getText().trim();
-        if ("seed".equals(nodeTypeCombo.getValue()) && seed.isEmpty()) {
-            errors.append("• Seed address is required when node type is \"seed\".\n");
-        } else if (!seed.isEmpty()) {
+        if (!seed.isEmpty()) {
             if (!seed.matches("^\\d{1,3}(\\.\\d{1,3}){3}:\\d{1,5}$")) {
                 errors.append("• Seed must be an IP address with a port, e.g. 127.0.0.1:7001\n");
             }
@@ -230,6 +229,17 @@ public class SettingsController {
     @FXML
     private void onCancel() {
         Navigator.showWorkspace();
+    }
+
+    @FXML
+    private void onResetDefaults() {
+        portField.setText("7001");
+        llmServerPortField.setText("4000");
+        nodeTypeCombo.setValue("basic");
+        seedField.setText("");
+        debugEnabledCheck.setSelected(false);
+        dataDirField.setText(System.getProperty("user.home") + "/.mosaic");
+        errorLabel.setVisible(false);
     }
 
 }

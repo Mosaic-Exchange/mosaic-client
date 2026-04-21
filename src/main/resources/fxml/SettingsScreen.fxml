@@ -37,8 +37,8 @@
                 <Label text="Settings" style="-fx-font-size: 22px; -fx-font-weight: bold;"/>
 
                 <!-- Error label -->
-                <Label fx:id="errorLabel" wrapText="true"
-                       style="-fx-text-fill: #f44336; -fx-font-size: 13px;"/>
+                <Label fx:id="errorLabel" wrapText="true" managed="${errorLabel.visible}" 
+                style="-fx-text-fill: #f44336; -fx-font-size: 13px;"/>
 
                 <!-- ── Network Configuration ── -->
                 <VBox spacing="12" styleClass="settings-section">
@@ -114,6 +114,7 @@
 
                 <!-- ── Save / Cancel ── -->
                 <HBox spacing="12" alignment="CENTER_RIGHT">
+                    <Button text="Reset to Defaults" onAction="#onResetDefaults" />
                     <Button text="Cancel" onAction="#onCancel" mnemonicParsing="false"/>
                     <Button text="Save"   onAction="#onSave"   mnemonicParsing="false"
                             defaultButton="true"/>

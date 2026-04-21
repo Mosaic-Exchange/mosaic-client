@@ -46,7 +46,7 @@ public class AppConfig {
     public void setPort(int port)                 { this.port = port; }
     public void setLlmServerPort(int port)        { this.llmServerPort = port; }
     public void setNodeType(String nodeType)      { this.nodeType = nodeType; }
-    public void setSeed(String seed)              { this.seed = seed; }
+    public void setSeed(String seed)              { this.seed = seed != null ? seed : ""; }
     public void setDebugEnabled(boolean enabled)  { this.debugEnabled = enabled; }
     public void setDataDir(String dataDir)        { this.dataDir = dataDir; }
 
@@ -119,6 +119,7 @@ public class AppConfig {
      * Returns defaults if the file is missing or unreadable.
      */
     public static AppConfig load(String filename) {
+        System.out.println("[config] DEBUG — load() v2 called");
         Path path = configPath(filename);
         AppConfig config = new AppConfig();
 
@@ -130,16 +131,23 @@ public class AppConfig {
         try {
             ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
             config = mapper.readValue(path.toFile(), AppConfig.class);
-            System.out.println("[config] Loaded " + filename + " — port=" + config.port
-                + " llm-port=" + config.llmServerPort
-                + " type=" + config.nodeType
-                + " seed=" + (config.seed.isEmpty() ? "(none)" : config.seed)
-                + " debug=" + config.debugEnabled
-                + " data-dir=" + config.dataDir);
-        } catch (IOException e) {
-            System.err.println("[config] Failed to read " + filename + ": " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("[config] Failed to parse " + filename + ": " + e.getMessage());
+            return new AppConfig();
         }
 
+        // normalize nulls — tools.jackson writes fields directly, bypassing setters
+        if (config.seed == null)     config.seed = "";
+        if (config.nodeType == null) config.nodeType = "basic";
+        if (config.dataDir == null)  config.dataDir = System.getProperty("user.home") + "/.mosaic";
+
+        System.out.println("[config] Loaded " + filename
+            + " — port=" + config.port
+            + " llm-port=" + config.llmServerPort
+            + " type=" + config.nodeType
+            + " seed=" + (config.seed.isEmpty() ? "(none)" : config.seed)
+            + " debug=" + config.debugEnabled
+            + " data-dir=" + config.dataDir);
         return config;
     }
 
