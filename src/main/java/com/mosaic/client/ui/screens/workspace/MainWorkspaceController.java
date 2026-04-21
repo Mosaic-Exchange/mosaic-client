@@ -280,8 +280,12 @@ public class MainWorkspaceController {
 
         if (remote) {
             activeInferenceHandle = net.inferRemote(prompt, callback);
+        } else if (expert != null) {
+            // BASE_MODEL has serverSideId = "", so it is ignored.
+            activeInferenceHandle = net.inferLocal(prompt, expert.serverSideId, callback);
         } else {
-            activeInferenceHandle = net.inferLocal(prompt, callback);
+            // This shouldn't happen, but just in case (and so IDE doesn't complain).
+            activeInferenceHandle = net.inferLocal(prompt, "", callback);
         }
     }
 

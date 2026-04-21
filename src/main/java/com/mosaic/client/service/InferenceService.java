@@ -63,8 +63,8 @@ public class InferenceService extends DistributedService<InferenceRequest, byte[
         JSONObject requestBody = new JSONObject();
         requestBody.put("request_id", String.valueOf(req.request_id()));
         requestBody.put("message", req.message());
+        if (!req.adapter_id().isEmpty()) { requestBody.put("adapter_id", req.adapter_id()); }
         if (req.maxOutputTokens() > 0) { requestBody.put("max_tokens", req.maxOutputTokens()); }
-//        adapterId.ifPresent(s -> requestBody.put("adapter_id", s));
 
         URI target = this.endpoint.resolve(apiSpec.get(APIOperation.GENERATE_STREAM));
         HttpRequest httpReq= HttpRequest.newBuilder()

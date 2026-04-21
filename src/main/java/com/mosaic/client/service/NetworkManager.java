@@ -164,13 +164,13 @@ public class NetworkManager {
      *
      * @return a handle to cancel the request, or null if the network is not running
      */
-    public ServiceHandle inferLocal(String prompt, InferenceCallback callback) {
+    public ServiceHandle inferLocal(String prompt, String adapterId, InferenceCallback callback) {
         if (!running) {
             Platform.runLater(() -> callback.onError("Network not started"));
             return null;
         }
 
-        InferenceRequest request = new InferenceRequest(prompt);
+        InferenceRequest request = new InferenceRequest(prompt, adapterId);
         return inferenceService.request(request, event -> {
             switch (event) {
                 case RequestEvent.StreamData d ->

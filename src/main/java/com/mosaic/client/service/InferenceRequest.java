@@ -19,7 +19,7 @@ public record InferenceRequest(
     private static int lastId = 0;
 
     public InferenceRequest(String prompt) {
-        this(prompt, null, 0, lastId++);
+        this(prompt, "", 0, lastId++);
     }
 
     public InferenceRequest(String prompt, String adapter_id) {
