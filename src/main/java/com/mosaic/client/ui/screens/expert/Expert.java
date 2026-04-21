@@ -15,6 +15,15 @@ public class Expert {
     private final StringProperty adapterFile = new SimpleStringProperty();
     private final ObjectProperty<Status> status = new SimpleObjectProperty<>();
 
+    private static Expert getBaseModel() {
+        Expert baseModel = new Expert("Base model", "General", Source.LOCAL, "N/A");
+        baseModel.serverSideId = "";
+        baseModel.status.set(Status.LOADED);
+        return baseModel;
+    }
+
+    public static final Expert BASE_MODEL = getBaseModel();
+
     public Expert(String name, String domain, Source source, String adapterFile) {
         setName(name);
         setDomain(domain);
@@ -56,6 +65,9 @@ public class Expert {
 
     // Status Property
     public void load(String newServerSideId) {
+        if (newServerSideId.isEmpty()) {
+            throw new IllegalArgumentException("newServerSideId must be non-empty.");
+        }
         status.set(Status.LOADED);
         serverSideId = newServerSideId;
     }

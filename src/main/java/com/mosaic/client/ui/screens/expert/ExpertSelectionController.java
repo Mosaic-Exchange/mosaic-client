@@ -316,6 +316,8 @@ public class ExpertSelectionController {
                         .toList()
         );
 
+        allExperts.add(Expert.BASE_MODEL);
+
         // Reload local adapters
         Files.list(NetworkManager.getInstance().getAdaptersDir())
                 .filter(Files::isDirectory)

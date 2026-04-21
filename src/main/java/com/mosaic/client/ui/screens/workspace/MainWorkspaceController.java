@@ -156,8 +156,7 @@ public class MainWorkspaceController {
         });
 
         if (activeExpert.get() == null) {
-            Navigator.setActiveExpert(new Expert("Gardening Expert", "Gardening", Expert.Source.LOCAL,
-                    "gardening_expert.gguf"));
+            Navigator.setActiveExpert(Expert.BASE_MODEL);
         }
 
         // Disable the chat panel if the current adapter is local, and the server is unavailable.

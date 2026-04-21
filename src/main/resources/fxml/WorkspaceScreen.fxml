@@ -32,8 +32,8 @@
     <top>
         <HBox styleClass="workspace-header" alignment="CENTER_LEFT" minHeight="52" spacing="12">
             <padding><Insets top="12" right="16" bottom="12" left="16"/></padding>
-            <Label fx:id="headerExpertName" text="Gardening Expert" styleClass="label-title"/>
-            <Label fx:id="headerExpertSource" text="Local" styleClass="label-muted"/>
+            <Label fx:id="headerExpertName" text="--" styleClass="label-title"/>
+            <Label fx:id="headerExpertSource" text="--" styleClass="label-muted"/>
             <Label fx:id="headerExpertMode" text="Inference" styleClass="label-muted"/>
             <Region HBox.hgrow="ALWAYS"/>
             <Button text="Switch Expert" styleClass="btn-primary" onAction="#onSwitchExpert"/>
@@ -85,15 +85,15 @@
                 <Label text="Expert Details" styleClass="label-title"/>
                 <Separator/>
                 <Label text="Name" styleClass="label-muted"/>
-                <Label fx:id="metaExpertName" text="Gardening Expert" styleClass="label-body"/>
+                <Label fx:id="metaExpertName" text="--" styleClass="label-body"/>
                 <Label text="Domain" styleClass="label-muted"/>
-                <Label fx:id="metaExpertDomain" text="Gardening" styleClass="label-body"/>
+                <Label fx:id="metaExpertDomain" text="--" styleClass="label-body"/>
                 <Label text="Source" styleClass="label-muted"/>
-                <Label fx:id="metaExpertSource" text="Local" styleClass="label-body"/>
+                <Label fx:id="metaExpertSource" text="--" styleClass="label-body"/>
                 <Label text="Adapter" styleClass="label-muted"/>
-                <Label fx:id="metaAdapterFile" text="gardening_expert.gguf" styleClass="label-body" wrapText="true"/>
+                <Label fx:id="metaAdapterFile" text="--" styleClass="label-body" wrapText="true"/>
                 <Label text="Status" styleClass="label-muted"/>
-                <Label fx:id="metaExpertStatus" text="Loaded" styleClass="expert-status-connected"/>
+                <Label fx:id="metaExpertStatus" text="--" styleClass="expert-status-connected"/>
             </VBox>
 
             <!-- Spacer pushes controls to the bottom -->
