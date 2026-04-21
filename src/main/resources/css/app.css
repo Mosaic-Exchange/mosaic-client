@@ -127,7 +127,7 @@
 .workspace-sidebar .list-cell {
     -fx-background-color: transparent;
     -fx-text-fill: #1A2C4C;
-    -fx-padding: 6 10;
+    -fx-padding: 4 6;
 }
 
 /* Hover effect */
@@ -139,6 +139,57 @@
 .workspace-sidebar .list-cell:selected {
     -fx-background-color: #A3C497;
     -fx-text-fill: #FFFCF7;
+}
+
+/* Session topic label inside the cell */
+.session-topic-label {
+    -fx-text-fill: #1A2C4C;
+    -fx-font-size: 13px;
+}
+.workspace-sidebar .list-cell:selected .session-topic-label {
+    -fx-text-fill: #FFFCF7;
+}
+
+/* Green M (rename) button */
+.workspace-sidebar .session-rename-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #2e7d32;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+    -fx-min-width: 20;
+    -fx-max-width: 20;
+    -fx-pref-width: 20;
+    -fx-min-height: 20;
+    -fx-max-height: 20;
+    -fx-pref-height: 20;
+    -fx-alignment: center;
+    -fx-background-radius: 4;
+}
+.workspace-sidebar .session-rename-btn:hover {
+    -fx-background-color: #c8e6c9;
+}
+
+/* Red X (delete) button */
+.workspace-sidebar .session-delete-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #b94040;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+    -fx-min-width: 20;
+    -fx-max-width: 20;
+    -fx-pref-width: 20;
+    -fx-min-height: 20;
+    -fx-max-height: 20;
+    -fx-pref-height: 20;
+    -fx-alignment: center;
+    -fx-background-radius: 4;
+}
+.workspace-sidebar .session-delete-btn:hover {
+    -fx-background-color: #f5dada;
 }
 
 /* Chat outer container */

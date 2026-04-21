@@ -84,6 +84,15 @@
                         </configuration>
                     </execution>
                     <execution>
+                        <id>run-frontend</id>
+                        <configuration>
+                            <mainClass>com.mosaic.client.MosaicApp</mainClass>
+                            <options>
+                                <option>-Dmosaic.frontendOnly=true</option>
+                            </options>
+                        </configuration>
+                    </execution>
+                    <execution>
                         <id>debug</id>
                         <configuration>
                             <mainClass>com.mosaic.client.MosaicApp</mainClass>

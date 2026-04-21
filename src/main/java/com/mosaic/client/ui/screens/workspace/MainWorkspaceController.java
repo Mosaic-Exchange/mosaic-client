@@ -22,12 +22,16 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
 import org.rumor.service.ServiceHandle;
+
+import java.util.Optional;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -111,10 +115,87 @@ public class MainWorkspaceController {
 
         // ── Session list setup (DB-backed) ───────────────────
         sessionListView.setCellFactory(lv -> new ListCell<>() {
+            private final HBox cellBox = new HBox(4);
+            private final Label topicLabel = new Label();
+            private final Button renameBtn = new Button("M");
+            private final Button deleteBtn = new Button("X");
+
+            {
+                topicLabel.setMaxWidth(Double.MAX_VALUE);
+                HBox.setHgrow(topicLabel, Priority.ALWAYS);
+                topicLabel.getStyleClass().add("session-topic-label");
+
+                renameBtn.getStyleClass().add("session-rename-btn");
+                renameBtn.setMaxSize(20, 20);
+                renameBtn.setMinSize(20, 20);
+                HBox.setHgrow(renameBtn, Priority.NEVER);
+
+                deleteBtn.getStyleClass().add("session-delete-btn");
+                deleteBtn.setMaxSize(20, 20);
+                deleteBtn.setMinSize(20, 20);
+                HBox.setHgrow(deleteBtn, Priority.NEVER);
+
+                renameBtn.setOnAction(e -> {
+                    ChatSession session = getItem();
+                    if (session == null) return;
+                    TextInputDialog dialog = new TextInputDialog(session.getTopic());
+                    dialog.setTitle("Rename Session");
+                    dialog.setHeaderText(null);
+                    dialog.setContentText("New name:");
+                    Optional<String> result = dialog.showAndWait();
+                    result.ifPresent(newName -> {
+                        if (!newName.trim().isEmpty()) {
+                            try {
+                                sessionDao.updateTopic(session.getSessionId(), newName.trim());
+                                loadSessionList();
+                            } catch (SQLException ex) {
+                                ex.printStackTrace();
+                            }
+                        }
+                    });
+                });
+
+                deleteBtn.setOnAction(e -> {
+                    ChatSession session = getItem();
+                    if (session == null) return;
+                    Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+                            "Delete session \"" + session.getTopic() + "\"?",
+                            ButtonType.OK, ButtonType.CANCEL);
+                    confirm.setTitle("Delete Session");
+                    confirm.setHeaderText(null);
+                    confirm.showAndWait()
+                           .filter(btn -> btn == ButtonType.OK)
+                           .ifPresent(btn -> {
+                               try {
+                                   sessionDao.delete(session.getSessionId());
+                                   if (currentSession != null
+                                           && currentSession.getSessionId() == session.getSessionId()) {
+                                       currentSession = null;
+                                       chatHistory.getChildren().clear();
+                                       messageInput.clear();
+                                   }
+                                   loadSessionList();
+                               } catch (SQLException ex) {
+                                   ex.printStackTrace();
+                               }
+                           });
+                });
+
+                cellBox.setAlignment(Pos.CENTER_LEFT);
+                cellBox.getChildren().addAll(topicLabel, renameBtn, deleteBtn);
+            }
+
             @Override
             protected void updateItem(ChatSession item, boolean empty) {
                 super.updateItem(item, empty);
-                setText(empty || item == null ? null : item.getTopic());
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    topicLabel.setText(item.getTopic());
+                    setGraphic(cellBox);
+                    setText(null);
+                }
             }
         });
 
