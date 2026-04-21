@@ -2,15 +2,20 @@ package com.mosaic.client.ui.screens.settings;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
-import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.control.ToggleButton;
+import javafx.stage.DirectoryChooser;
 import com.mosaic.client.AppConfig;
 import com.mosaic.client.Navigator;
 import com.mosaic.client.service.NetworkManager;
+import javafx.application.Platform;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.ServerSocket;
 
 /**
  * Controller for the Settings screen.
@@ -25,50 +30,53 @@ import com.mosaic.client.service.NetworkManager;
  */
 public class SettingsController {
 
-    // ── Privacy & Sharing ────────────────────────────────────
-    @FXML private ToggleButton shareAnonymousDataToggle;
-    @FXML private ToggleButton localOnlyModeToggle;
+    // ── Debug & Storage ──────────────────────────────────────
+    @FXML private CheckBox   debugEnabledCheck;
+    @FXML private TextField  dataDirField;
+    @FXML private Button     browseDirBtn;
 
     // ── Network Configuration ────────────────────────────────
-    @FXML private ComboBox<String> networkModeCombo;
-    @FXML private TextArea         bootstrapNodesArea;
-    @FXML private TextField        networkPortField;
-    @FXML private Label            networkStatusLabel;
+    @FXML private TextField  portField;
+    @FXML private TextField  llmServerPortField;
+    @FXML private ComboBox<String> nodeTypeCombo;
+    @FXML private TextField  seedField;
+    @FXML private Label      networkStatusLabel;
 
-    // ── Adapter Management ───────────────────────────────────
-    @FXML private CheckBox  bluetoothAdapterCheck;
-    @FXML private CheckBox  wifiAdapterCheck;
-    @FXML private CheckBox  ethernetAdapterCheck;
-    @FXML private TextField customAdapterField;
+    // ── Error display ────────────────────────────────────────
+    @FXML private Label      errorLabel;
 
     @FXML
     public void initialize() {
-        // Populate network mode options
-        networkModeCombo.getItems().addAll("Automatic", "Manual", "Offline");
-        networkModeCombo.setValue("Automatic");
+        // Load the current settings from the config file and pre-fill the fields
+        AppConfig config = AppConfig.load();
+ 
+        portField.setText(String.valueOf(config.port()));
+        llmServerPortField.setText(String.valueOf(config.llmServerPort()));
 
-        // Default values
-        shareAnonymousDataToggle.setSelected(false);
-        localOnlyModeToggle.setSelected(false);
-        bootstrapNodesArea.setPromptText("e.g. 192.168.1.1:4001, peer.example.com:4001");
+        // Dropdown with only the valid options
+        nodeTypeCombo.getItems().addAll("basic", "seed", "master");
+        nodeTypeCombo.setValue(config.nodeType());
 
-        bluetoothAdapterCheck.setSelected(true);
-        wifiAdapterCheck.setSelected(true);
-        ethernetAdapterCheck.setSelected(false);
-        customAdapterField.setPromptText("Enter custom adapter name");
+        seedField.setText(config.seed());
+        debugEnabledCheck.setSelected(config.debugEnabled());
+        dataDirField.setText(config.dataDir().toString());
 
-        shareAnonymousDataToggle.selectedProperty().addListener((obs, wasSelected, isSelected) ->
-            shareAnonymousDataToggle.setText(isSelected ? "On" : "Off"));
+        browseDirBtn.setOnAction(e -> {
+            DirectoryChooser dc = new DirectoryChooser();
+            dc.setTitle("Select Data Directory");
+            File current = config.dataDir().toFile();
+            if (current.exists()) dc.setInitialDirectory(current);
+            File chosen = dc.showDialog(browseDirBtn.getScene().getWindow());
+            if (chosen != null) {
+                dataDirField.setText(chosen.getAbsolutePath());
+            }
+        });
 
-        localOnlyModeToggle.selectedProperty().addListener((obs, wasSelected, isSelected) ->
-            localOnlyModeToggle.setText(isSelected ? "On" : "Off"));
-
-        // Network status
-        if (networkPortField != null) {
-            networkPortField.setText("7000");
-            networkPortField.setPromptText("e.g. 7000");
-        }
+        errorLabel.setVisible(false);
+ 
         updateNetworkStatus();
+        Platform.runLater(() -> portField.getScene().getRoot().requestFocus());
+
     }
 
     private void updateNetworkStatus() {
@@ -85,19 +93,30 @@ public class SettingsController {
 
     @FXML
     private void onSave() {
-        System.out.println("=== Settings Saved ===");
-        System.out.println("[Privacy] Share anonymous data : " + shareAnonymousDataToggle.isSelected());
-        System.out.println("[Privacy] Local-only mode      : " + localOnlyModeToggle.isSelected());
-        System.out.println("[Network] Mode                 : " + networkModeCombo.getValue());
-        System.out.println("[Network] Bootstrap nodes      : " + bootstrapNodesArea.getText().trim());
-        System.out.println("[Adapter] Bluetooth            : " + bluetoothAdapterCheck.isSelected());
-        System.out.println("[Adapter] Wi-Fi                : " + wifiAdapterCheck.isSelected());
-        System.out.println("[Adapter] Ethernet             : " + ethernetAdapterCheck.isSelected());
-        System.out.println("[Adapter] Custom               : " + customAdapterField.getText().trim());
 
-        // Apply network configuration
-        applyNetworkSettings();
+        if (!validateAndApply()) return;
+ 
+        AppConfig config = AppConfig.load();
 
+        // Copy the validated UI values into the config object
+        config.setPort(Integer.parseInt(portField.getText().trim()));
+        config.setLlmServerPort(Integer.parseInt(llmServerPortField.getText().trim()));
+        config.setNodeType(nodeTypeCombo.getValue());
+        config.setSeed(seedField.getText().trim());
+        config.setDebugEnabled(debugEnabledCheck.isSelected());
+        config.setDataDir(dataDirField.getText().trim());
+
+        // Write the config object to mosaic.yml
+        try {
+            config.save();
+        } catch (IOException e) {
+            showError("Could not write config file: " + e.getMessage());
+            return;
+        }
+
+        // Also apply the network settings live so changes take effect immediately
+        applyNetworkSettings(config);
+ 
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Settings");
         alert.setHeaderText(null);
@@ -105,62 +124,124 @@ public class SettingsController {
         alert.showAndWait();
     }
 
-    private void applyNetworkSettings() {
-        NetworkManager net = NetworkManager.getInstance();
+    
+    /**
+     * Validates all fields. Returns true if everything is okay, false if not.
+     * When false, the error label is shown with a message explaining what's wrong.
+     */
+    private boolean validateAndApply() {
 
-        if ("Offline".equals(networkModeCombo.getValue())) {
-            net.stop();
-            updateNetworkStatus();
-            return;
+        AppConfig current = AppConfig.load();
+        StringBuilder errors = new StringBuilder();
+        // ── port ──────────────────────────────────────────────
+        int port = -1;
+        try {
+            port = Integer.parseInt(portField.getText().trim());
+            if (port < 0 || port > 65535) {
+                errors.append("• Port must be a number between 0 and 65535.\n");
+                port = -1;
+            }
+        } catch (NumberFormatException e) {
+            errors.append("• Port must be a number.\n");
         }
 
-        int port = 7000;
-        if (networkPortField != null && !networkPortField.getText().isBlank()) {
-            try {
-                port = Integer.parseInt(networkPortField.getText().trim());
-            } catch (NumberFormatException e) {
-                new Alert(Alert.AlertType.ERROR, "Invalid port number.", javafx.scene.control.ButtonType.OK)
-                        .showAndWait();
-                return;
+        // ── llmServerPort ─────────────────────────────────────
+        int llmPort = -1;
+        try {
+            llmPort = Integer.parseInt(llmServerPortField.getText().trim());
+            if (llmPort < 0 || llmPort > 65535) {
+                errors.append("• LLM Server Port must be a number between 0 and 65535.\n");
+                llmPort = -1;
+            }
+        } catch (NumberFormatException e) {
+            errors.append("• LLM Server Port must be a number.\n");
+        }
+
+        // ── port availability ─────────────────────────────────
+        // Only check if the values parsed successfully
+        if (port != -1 && port != current.port() && !isPortAvailable(port)) {
+            errors.append("• Port ").append(port).append(" is already in use by another process.\n");
+        }
+        if (llmPort != -1 && llmPort != current.llmServerPort() && !isPortAvailable(llmPort)) {
+            errors.append("• LLM Server Port ").append(llmPort).append(" is already in use by another process.\n");
+        }
+
+        // ── seed ───────────────────────────────────────────────
+        String seed = seedField.getText().trim();
+        if (!seed.isEmpty()) {
+            if (!seed.matches("^\\d{1,3}(\\.\\d{1,3}){3}:\\d{1,5}$")) {
+                errors.append("• Seed must be an IP address with a port, e.g. 127.0.0.1:7001\n");
             }
         }
 
-        String seedsText = bootstrapNodesArea.getText().trim();
-        String[] seeds = seedsText.isEmpty() ? new String[0] : seedsText.split("[,\\n]+");
-        for (int i = 0; i < seeds.length; i++) {
-            seeds[i] = seeds[i].trim();
+        // ── dataDir ───────────────────────────────────────────
+        String dataDir = dataDirField.getText().trim();
+        if (dataDir.isEmpty()) {
+            errors.append("• Data directory cannot be empty.\n");
         }
 
-        // Restart with new config (debug file / flag still follow active config)
+         // ── Show errors or proceed ────────────────────────────
+        if (errors.length() > 0) {
+            errorLabel.setText(errors.toString().trim());
+            errorLabel.setVisible(true);
+            return false;
+        }
+
+        errorLabel.setVisible(false);
+        return true;
+    }
+
+    /**
+     * Tries to open a ServerSocket on the given port.
+     * If it succeeds, the port is free. If it throws, something else is using it.
+     */
+    private boolean isPortAvailable(int port) {
+        try (ServerSocket ss = new ServerSocket(port)) {
+            ss.setReuseAddress(true);
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    private void applyNetworkSettings(AppConfig config) {
+        NetworkManager net = NetworkManager.getInstance();
         net.stop();
         try {
-            AppConfig cfg = AppConfig.load();
-            String nodeType = seeds.length == 0 ? "master" : "basic";
-            net.start(port, cfg.llmServerPort(), nodeType, cfg.debugEnabled(), cfg.dataDir(), cfg.logDir(), seeds);
+            net.start(
+                config.port(),
+                config.llmServerPort(),
+                config.nodeType(),
+                config.debugEnabled(),
+                config.dataDir(),
+                config.logDir(),
+                config.seedAddresses()
+            );
         } catch (Exception e) {
-            new Alert(Alert.AlertType.ERROR, "Failed to start network: " + e.getMessage(),
-                    javafx.scene.control.ButtonType.OK).showAndWait();
+            showError("Settings saved, but failed to restart network: " + e.getMessage());
         }
-
         updateNetworkStatus();
     }
 
+    private void showError(String message) {
+        errorLabel.setText(message);
+        errorLabel.setVisible(true);
+    }
+ 
     @FXML
     private void onCancel() {
         Navigator.showWorkspace();
     }
 
     @FXML
-    private void onAddAdapter() {
-        String name = customAdapterField.getText().trim();
-        if (name.isEmpty()) return;
-        System.out.println("[Adapter] Add requested for: " + name);
-        customAdapterField.clear();
-    }
-
-    @FXML
-    private void onRemoveAdapter() {
-        System.out.println("[Adapter] Remove requested");
+    private void onResetDefaults() {
+        portField.setText("7001");
+        llmServerPortField.setText("4000");
+        nodeTypeCombo.setValue("basic");
+        seedField.setText("");
+        debugEnabledCheck.setSelected(false);
+        dataDirField.setText(System.getProperty("user.home") + "/.mosaic");
+        errorLabel.setVisible(false);
     }
 
 }

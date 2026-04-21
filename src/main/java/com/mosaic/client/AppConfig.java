@@ -5,7 +5,11 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.dataformat.yaml.YAMLFactory;
 
 /**
  * Application configuration loaded from a YAML-style file ({@code mosaic.yml})
@@ -14,11 +18,13 @@ import java.util.List;
  * <p>Format is simple key-value pairs ({@code key: value}), one per line.
  * Lines starting with {@code #} are comments. Blank lines are ignored.
  */
-public class AppConfig {
 
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+public class AppConfig {
+    @JsonIgnore
     private static String activeConfigFilename;
 
-    private int port = 7000;
+    private int port = 7001;
     private int llmServerPort = 4000;
     private String nodeType = "basic";
     private String seed = "";
@@ -26,6 +32,23 @@ public class AppConfig {
     private String dataDir = System.getProperty("user.home") + "/.mosaic";
 
     private AppConfig() {}
+
+    /**
+     * Writes the current config back to the active config file (mosaic.yml).
+     * Call this whenever the user saves settings.
+     */
+    public void save() throws IOException {
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        mapper.writeValue(configPath().toFile(), this);
+        System.out.println("[config] Saved settings to " + configPath());
+    }
+
+    public void setPort(int port)                 { this.port = port; }
+    public void setLlmServerPort(int port)        { this.llmServerPort = port; }
+    public void setNodeType(String nodeType)      { this.nodeType = nodeType; }
+    public void setSeed(String seed)              { this.seed = seed != null ? seed : ""; }
+    public void setDebugEnabled(boolean enabled)  { this.debugEnabled = enabled; }
+    public void setDataDir(String dataDir)        { this.dataDir = dataDir; }
 
     /**
      * Sets the configuration file name to use globally (e.g. {@code mosaic.yml}).
@@ -105,36 +128,24 @@ public class AppConfig {
         }
 
         try {
-            List<String> lines = Files.readAllLines(path);
-            for (String raw : lines) {
-                String line = raw.trim();
-                if (line.isEmpty() || line.startsWith("#")) continue;
-
-                int colon = line.indexOf(':');
-                if (colon < 0) continue;
-
-                String key = line.substring(0, colon).trim().toLowerCase();
-                String value = line.substring(colon + 1).trim();
-
-                switch (key) {
-                    case "port"            -> config.port = parsePort(value);
-                    case "llm-server-port" -> config.llmServerPort = parsePort(value);
-                    case "node-type"       -> config.nodeType = value;
-                    case "seed"            -> config.seed = value;
-                    case "debug-enabled"   -> config.debugEnabled = parseBoolean(value);
-                    case "data-dir"        -> config.dataDir = value;
-                }
-            }
-            System.out.println("[config] Loaded " + filename + " — port=" + config.port
-                    + " llm-port=" + config.llmServerPort
-                    + " type=" + config.nodeType
-                    + " seed=" + (config.seed.isEmpty() ? "(none)" : config.seed)
-                    + " debug=" + config.debugEnabled
-                    + " data-dir=" + config.dataDir);
-        } catch (IOException e) {
-            System.err.println("[config] Failed to read " + filename + ": " + e.getMessage());
+            ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+            config = mapper.readValue(path.toFile(), AppConfig.class);
+        } catch (Exception e) {
+            System.err.println("[config] Failed to parse " + filename + ": " + e.getMessage());
+            return new AppConfig();
         }
 
+        if (config.seed == null)     config.seed = "";
+        if (config.nodeType == null) config.nodeType = "basic";
+        if (config.dataDir == null)  config.dataDir = System.getProperty("user.home") + "/.mosaic";
+
+        System.out.println("[config] Loaded " + filename
+            + " — port=" + config.port
+            + " llm-port=" + config.llmServerPort
+            + " type=" + config.nodeType
+            + " seed=" + (config.seed.isEmpty() ? "(none)" : config.seed)
+            + " debug=" + config.debugEnabled
+            + " data-dir=" + config.dataDir);
         return config;
     }
 
@@ -160,7 +171,7 @@ public class AppConfig {
                 # Lives next to the runnable jar (or project root in dev).
 
                 # Network port this node listens on
-                port: 7000
+                port: 7001
 
                 # Network port for the local LLM server (middleware)
                 llm-server-port: 4000
@@ -185,7 +196,6 @@ public class AppConfig {
             Files.writeString(path, content);
             System.out.println("[config] Created default " + filename);
         } catch (IOException e) {
-            // Non-fatal — the app works fine without the file
             System.err.println("[config] Could not write default " + filename + ": " + e.getMessage());
         }
     }
@@ -215,8 +225,8 @@ public class AppConfig {
             int p = Integer.parseInt(s);
             if (p > 0 && p <= 65535) return p;
         } catch (NumberFormatException ignored) {}
-        System.err.println("[config] Invalid port '" + s + "', using 7000");
-        return 7000;
+        System.err.println("[config] Invalid port '" + s + "', using 7001");
+        return 7001;
     }
 
     private static boolean parseBoolean(String s) {
