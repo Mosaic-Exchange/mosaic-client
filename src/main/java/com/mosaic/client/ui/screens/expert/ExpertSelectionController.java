@@ -235,14 +235,40 @@ public class ExpertSelectionController {
         NetworkManager.getInstance().registerAdapter(
                 NetworkManager.getInstance().getAdaptersDir().resolve(currentSelected.getAdapterFile()),
                 response -> {
+                    // Disable input
                     downloadBtn.getScene().getRoot().setDisable(false);
+
+                    // Handle error responses
                     if (response.error().isPresent()) {
-                        Platform.runLater(() -> { new Alert(Alert.AlertType.ERROR, "Failed to register adapter: " + response.error().get()).showAndWait(); });
+                        Platform.runLater(() -> {
+                            new Alert(Alert.AlertType.ERROR,
+                                    "Failed to register adapter: " + response.error().get()
+                            ).showAndWait();
+                        });
                         return;
                     }
+
+                    currentSelected.load(response.adapterId());
+
+                    // Attempt database update
+                    try {
+                        adapterDao.upsert(currentSelected);
+                    } catch (SQLException e) {
+                        // Failed, reset server side ID.
+                        currentSelected.unload();
+                        Platform.runLater(() -> {
+                            new Alert(
+                                    Alert.AlertType.ERROR,
+                                    "Failed to register adapter: Could not update server side ID in database (%s)."
+                                            .formatted(e.getMessage())
+                            ).showAndWait();
+                        });
+                        return;
+                    }
+
+                    // Success!
                     System.getLogger("ExpertSelectionController").log(System.Logger.Level.INFO,
                             "Registered adapter with response: " + response);
-                    currentSelected.load(response.adapterId());
                 },
                 throwable -> {
                     downloadBtn.getScene().getRoot().setDisable(false);
