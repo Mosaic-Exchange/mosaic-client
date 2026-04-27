@@ -130,15 +130,30 @@ public class LLMServer {
         this.port = port;
         this.baseUri = new URI("http", "", this.host, this.port, "/", "", "");
 
-        // Start the process
-        proc = new ProcessBuilder(
-                "bash",
-                SERVER_DIR.resolve("start-server.sh").toString(),
-                "--host",
-                host,
-                "--port",
-                String.valueOf(port)
-        )
+        // Determine the command based on OS
+        String os = System.getProperty("os.name").toLowerCase();
+        boolean isWindows = os.contains("win");
+        String scriptName = isWindows ? "start-server.bat" : "start-server.sh";
+        String scriptPath = SERVER_DIR.resolve(scriptName).toString();
+
+        ProcessBuilder pb;
+        if (isWindows) {
+            pb = new ProcessBuilder(
+                    "cmd", "/c",
+                    scriptPath,
+                    "--host", host,
+                    "--port", String.valueOf(port)
+            );
+        } else {
+            pb = new ProcessBuilder(
+                    "bash",
+                    scriptPath,
+                    "--host", host,
+                    "--port", String.valueOf(port)
+            );
+        }
+
+        proc = pb
                 .redirectErrorStream(true)
                 .redirectOutput(logFile.toFile())
                 .start();
