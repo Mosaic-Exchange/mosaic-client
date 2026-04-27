@@ -154,10 +154,11 @@ public class ExpertSelectionController {
             @Override
             protected void updateItem(Expert item, boolean empty) {
                 super.updateItem(item, empty);
+                textProperty().unbind();
                 if (empty || item == null) {
                     setText(null);
                 } else {
-                    setText(item.getName() + "  ·  " + item.getDomain());
+                    textProperty().bind(item.nameProperty().concat("  ·  ").concat(item.domainProperty()));
                 }
             }
         });
@@ -176,6 +177,11 @@ public class ExpertSelectionController {
             if (newValue == null) {
                 // Cannot use this button without an expert selected.
                 downloadBtn.setDisable(true);
+                detailSaveBtn.setVisible(false);
+                detailName.setEditable(false);
+                detailDomain.setEditable(false);
+                detailName.setText("");
+                detailDomain.setText("");
                 return;
             }
 
@@ -515,7 +521,13 @@ public class ExpertSelectionController {
 
     // ── Detail save ────────────────────
     private void updateDetailSaveButton(String name, String domain) {
-        if (selectedExpert.get().getName().equals(name) && selectedExpert.get().getDomain().equals(domain)) {
+        Expert expert = selectedExpert.get();
+        if (expert == null) {
+            detailSaveBtn.setVisible(false);
+            return;
+        }
+
+        if (expert.getName().equals(name) && expert.getDomain().equals(domain)) {
             detailSaveBtn.setVisible(false);
             return;
         }
@@ -526,17 +538,25 @@ public class ExpertSelectionController {
     }
 
     public void onDetailReset(ActionEvent unused) {
-        detailName.setText(selectedExpert.get().getName());
-        detailDomain.setText(selectedExpert.get().getDomain());
+        Expert expert = selectedExpert.get();
+        if (expert != null) {
+            detailName.setText(expert.getName());
+            detailDomain.setText(expert.getDomain());
+        }
     }
 
     public void onDetailSave(ActionEvent unused) {
+        Expert expert = selectedExpert.get();
+        if (expert == null) {
+            return;
+        }
+
         try {
             adapterDao.upsert(
-                    selectedExpert.get().getAdapterFile(),
+                    expert.getAdapterFile(),
                     detailName.getText(),
                     detailDomain.getText(),
-                    selectedExpert.get().getServerSideId()
+                    expert.getServerSideId()
             );
         } catch (SQLException e) {
             new Alert(Alert.AlertType.ERROR, "Failed to update adapter database: " + e.getMessage()).showAndWait();
@@ -545,10 +565,10 @@ public class ExpertSelectionController {
         }
 
         // DB operation succeeded
-        selectedExpert.get().setName(detailName.getText());
-        selectedExpert.get().setDomain(detailDomain.getText());
+        expert.setName(detailName.getText());
+        expert.setDomain(detailDomain.getText());
 
-        updateDetailSaveButton(selectedExpert.get().getName(), selectedExpert.get().getDomain());
+        updateDetailSaveButton(expert.getName(), expert.getDomain());
     }
 
     // ── Load local adapters ────────────────────
