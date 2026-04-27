@@ -1,7 +1,7 @@
 package com.mosaic.client.db.dao;
 
 import com.mosaic.client.db.DatabaseManager;
-import com.mosaic.client.db.model.Adapter;
+import com.mosaic.client.ui.screens.expert.Expert;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -17,34 +17,31 @@ public class AdapterDao {
         return DatabaseManager.getInstance().getConnection();
     }
 
-    public void upsert(Adapter adapter) throws SQLException {
-        String sql = """
-            INSERT INTO Local_Adapters (adapter_id, name, domain, file_path, file_hash, size_mb)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(adapter_id) DO UPDATE SET
-                name = excluded.name,
-                domain = excluded.domain,
-                file_path = excluded.file_path,
-                file_hash = excluded.file_hash,
-                size_mb = excluded.size_mb
-            """;
+    public void upsert(Expert adapter) throws SQLException {
+        String sql = "INSERT INTO Local_Adapters (file_path, name, domain, server_side_id) " +
+                     "VALUES (?, ?, ?, ?) " +
+                     "ON CONFLICT(file_path) DO UPDATE SET " +
+                     "name = ?, " +
+                     "domain = ?, " +
+                     "server_side_id = ?";
         try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
-            ps.setString(1, adapter.getAdapterId());
+            ps.setString(1, adapter.getAdapterFile());
             ps.setString(2, adapter.getName());
             ps.setString(3, adapter.getDomain());
-            ps.setString(4, adapter.getFilePath());
-            ps.setString(5, adapter.getFileHash());
-            ps.setInt(6, adapter.getSizeMb());
+            ps.setString(4, adapter.getServerSideId());
+            ps.setString(5, adapter.getName());
+            ps.setString(6, adapter.getDomain());
+            ps.setString(7, adapter.getServerSideId());
             ps.executeUpdate();
         }
     }
 
-    public List<Adapter> findAll() throws SQLException {
-        String sql = "SELECT adapter_id, name, domain, file_path, file_hash, size_mb "
+    public List<Expert> findAll() throws SQLException {
+        String sql = "SELECT name, domain, file_path, server_side_id "
                    + "FROM Local_Adapters ORDER BY name ASC";
-        List<Adapter> list = new ArrayList<>();
+        List<Expert> list = new ArrayList<>();
         try (Statement stmt = getConnection().createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+            ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 list.add(mapRow(rs));
             }
@@ -52,14 +49,13 @@ public class AdapterDao {
         return list;
     }
 
-    private Adapter mapRow(ResultSet rs) throws SQLException {
-        return new Adapter(
-            rs.getString("adapter_id"),
+    private Expert mapRow(ResultSet rs) throws SQLException {
+        return new Expert(
             rs.getString("name"),
             rs.getString("domain"),
+            Expert.Source.LOCAL,
             rs.getString("file_path"),
-            rs.getString("file_hash"),
-            rs.getInt("size_mb")
+            rs.getString("server_side_id")
         );
     }
 }

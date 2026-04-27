@@ -24,12 +24,34 @@ public class Expert {
 
     public static final Expert BASE_MODEL = getBaseModel();
 
+    /** Unloaded adapter constructor. */
     public Expert(String name, String domain, Source source, String adapterFile) {
+        assert source != null : "Attempted to initialize Expert with null source.";
+
         setName(name);
         setDomain(domain);
         setSource(source);
         setAdapterFile(adapterFile);
         status.set(source.equals(Source.REMOTE) ? Status.REMOTE : Status.UNLOADED);
+    }
+
+    /** Dynamic loaded/unloaded adapter constructor. */
+    public Expert(String name, String domain, Source source, String adapterFile, String serverSideId) {
+        assert source != null : "Attempted to initialize Expert with null source.";
+
+        setName(name);
+        setDomain(domain);
+        setSource(source);
+        setAdapterFile(adapterFile);
+
+        if (source == Source.REMOTE) {
+            status.setValue(Status.REMOTE);
+        } else if (serverSideId != null && !serverSideId.isEmpty()) {
+            this.serverSideId = serverSideId;
+            status.set(Status.LOADED);
+        } else {
+            status.set(Status.UNLOADED);
+        }
     }
 
     public boolean isRemote() {
@@ -41,7 +63,7 @@ public class Expert {
     }
 
     // Server-side ID (used for queries)
-    public String serverSideId;
+    private String serverSideId;
 
     // Getters
     public String getName() { return name.get(); }
@@ -49,6 +71,7 @@ public class Expert {
     public Source getSource() { return source.get(); }
     public String getAdapterFile() { return adapterFile.get(); }
     public Status getStatus() { return status.get(); }
+    public String getServerSideId() { return serverSideId; }
 
     // Setters
     public void setName(String value) { name.set(value); }

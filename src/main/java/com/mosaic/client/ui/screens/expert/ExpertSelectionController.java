@@ -1,6 +1,7 @@
 package com.mosaic.client.ui.screens.expert;
 
 import com.mosaic.client.Navigator;
+import com.mosaic.client.db.dao.AdapterDao;
 import com.mosaic.client.service.AdapterMetadata;
 import com.mosaic.client.service.NetworkManager;
 import javafx.application.Platform;
@@ -22,6 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.SQLException;
 import java.util.Map;
 
 /**
@@ -65,6 +67,9 @@ public class ExpertSelectionController {
     /** Master (unfiltered) list of experts. */
     private ObservableList<Expert> allExperts;
 
+    /** Adapter DAO */
+    private final AdapterDao adapterDao = new AdapterDao();
+
     /** Filtered view that the ListView displays. */
     private FilteredList<Expert> filteredExperts;
 
@@ -78,7 +83,7 @@ public class ExpertSelectionController {
 
         try {
             loadLocalAdapters();
-        } catch (IOException e) {
+        } catch (SQLException e) {
             System.getLogger("ExpertSelectionController").log(
                     System.Logger.Level.ERROR,
                     "Loading local adapters failed: " + e.getMessage()
@@ -308,7 +313,7 @@ public class ExpertSelectionController {
 
     // ── Load local adapters ────────────────────
 
-    private void loadLocalAdapters() throws IOException {
+    private void loadLocalAdapters() throws SQLException {
         // Remove the current local adapters
         allExperts.removeAll(
                 allExperts.stream()
@@ -317,26 +322,27 @@ public class ExpertSelectionController {
         );
 
         allExperts.add(Expert.BASE_MODEL);
+        allExperts.addAll(adapterDao.findAll());
 
         // Reload local adapters
-        Files.list(NetworkManager.getInstance().getAdaptersDir())
-                .filter(Files::isDirectory)
-                .forEach(
-                        (Path dir) -> {
-                            File child = dir.resolve("adapter.yml").toFile();
-                            if (child.exists() && child.isFile()) {
-                                AdapterMetadata metadata = AdapterMetadata.fromFile(child.toPath());
-                                allExperts.add(
-                                        new Expert(
-                                                metadata.name(),
-                                                metadata.domain(),
-                                                Expert.Source.LOCAL,
-                                                dir.getFileName().toString()
-                                        )
-                                );
-                            };
-                        }
-                );
+//        Files.list(NetworkManager.getInstance().getAdaptersDir())
+//                .filter(Files::isDirectory)
+//                .forEach(
+//                        (Path dir) -> {
+//                            File child = dir.resolve("adapter.yml").toFile();
+//                            if (child.exists() && child.isFile()) {
+//                                AdapterMetadata metadata = AdapterMetadata.fromFile(child.toPath());
+//                                allExperts.add(
+//                                        new Expert(
+//                                                metadata.name(),
+//                                                metadata.domain(),
+//                                                Expert.Source.LOCAL,
+//                                                dir.getFileName().toString()
+//                                        )
+//                                );
+//                            };
+//                        }
+//                );
     }
 
     // ── Network discovery ────────────────────────────────────
@@ -401,6 +407,14 @@ public class ExpertSelectionController {
             return;
         }
 
+        Expert newExpert = new Expert("", "", Expert.Source.LOCAL, newAdapterDir.getName());
+        try {
+            adapterDao.upsert(newExpert);
+        } catch (SQLException e) {
+            new Alert(Alert.AlertType.ERROR, "Failed to update adapter database: " + e.getMessage()).showAndWait();
+            return;
+        }
+
         Path configFile = targetDir.toPath().resolve("adapter.yml");
         if (!Files.exists(configFile)) {
             new AdapterMetadata("", "").toFile(
@@ -410,7 +424,7 @@ public class ExpertSelectionController {
 
         try {
             loadLocalAdapters();
-        } catch (IOException e) {
+        } catch (SQLException e) {
             System.getLogger("ExpertSelectionController").log(
                     System.Logger.Level.ERROR,
                     "Loading local adapters failed: " + e.getMessage()

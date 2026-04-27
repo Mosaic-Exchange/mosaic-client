@@ -66,12 +66,10 @@ public class DatabaseManager {
 
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS Local_Adapters (
-                    adapter_id TEXT PRIMARY KEY,
-                    name       TEXT NOT NULL,
-                    domain     TEXT,
-                    file_path  TEXT,
-                    file_hash  TEXT,
-                    size_mb    INTEGER
+                    file_path      TEXT PRIMARY KEY,
+                    name           TEXT NOT NULL,
+                    domain         TEXT,
+                    server_side_id TEXT UNIQUE
                 )
             """);
 
@@ -84,7 +82,7 @@ public class DatabaseManager {
                     content      TEXT    NOT NULL,
                     used_adapter TEXT,
                     FOREIGN KEY (session_id)   REFERENCES Chat_Session(session_id) ON DELETE CASCADE,
-                    FOREIGN KEY (used_adapter)  REFERENCES Local_Adapters(adapter_id)
+                    FOREIGN KEY (used_adapter)  REFERENCES Local_Adapters(file_path)
                 )
             """);
 
