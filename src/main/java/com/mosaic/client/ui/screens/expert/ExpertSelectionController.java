@@ -144,6 +144,29 @@ public class ExpertSelectionController {
         detailAdapter.textProperty().bind(selectedExpert.flatMap(Expert::adapterFileProperty).orElse("—"));
         detailStatus.textProperty().bind(selectedExpert.flatMap(Expert::statusProperty).map(Object::toString).orElse("—"));
 
+        // Change download button based on expert
+        selectedExpert.addListener((observable, oldValue, newValue) -> {
+            if (newValue == null) {
+                // Cannot use this button without an expert selected.
+                downloadBtn.setDisable(true);
+                return;
+            }
+
+            // Cannot use this button with the base model (though the text should still change).
+            downloadBtn.setDisable(newValue == Expert.BASE_MODEL);
+
+            if (newValue.isRemote()) {
+                downloadBtn.setText("Download");
+            } else if (newValue.isLoaded()) {
+                downloadBtn.setText("Unload");
+            } else {
+                downloadBtn.setText("Load");
+            }
+        });
+
+        // Initially disabled
+        downloadBtn.setDisable(true);
+
         // Reactive styling for the status label
         selectedExpert.flatMap(Expert::statusProperty).addListener((obs, oldStatus, newStatus) -> {
             detailStatus.getStyleClass().removeAll("expert-status-connected", "expert-status-disconnected", "expert-status-remote");
@@ -157,7 +180,6 @@ public class ExpertSelectionController {
         });
 
         confirmBtn.disableProperty().bind(selectedExpert.isNull());
-        downloadBtn.disableProperty().bind(selectedExpert.isNull());
     }
 
     // ── AC1: Filter logic ────────────────────────────────────
@@ -193,23 +215,27 @@ public class ExpertSelectionController {
     private void onConfirm() {
         Expert currentSelected = selectedExpert.get();
         if (currentSelected != null) {
-            Navigator.setActiveExpert(currentSelected);
-
             if (!currentSelected.isRemote() && !currentSelected.isLoaded()) {
-                loadAdapter(currentSelected);
+                new Alert(
+                        Alert.AlertType.ERROR,
+                        "Local adapters must be loaded before they can be used."
+                ).showAndWait();
+                return;
             }
+            Navigator.setActiveExpert(currentSelected);
+            Navigator.showWorkspace();
         } else {
             Navigator.showWorkspace();
         }
     }
 
     private void loadAdapter(Expert currentSelected) {
-        confirmBtn.getScene().getRoot().setDisable(true);
+        downloadBtn.getScene().getRoot().setDisable(true);
 
         NetworkManager.getInstance().registerAdapter(
                 NetworkManager.getInstance().getAdaptersDir().resolve(currentSelected.getAdapterFile()),
                 response -> {
-                    confirmBtn.getScene().getRoot().setDisable(false);
+                    downloadBtn.getScene().getRoot().setDisable(false);
                     if (response.error().isPresent()) {
                         Platform.runLater(() -> { new Alert(Alert.AlertType.ERROR, "Failed to register adapter: " + response.error().get()).showAndWait(); });
                         return;
@@ -219,7 +245,7 @@ public class ExpertSelectionController {
                     currentSelected.load(response.adapterId());
                 },
                 throwable -> {
-                    confirmBtn.getScene().getRoot().setDisable(false);
+                    downloadBtn.getScene().getRoot().setDisable(false);
                     Platform.runLater(() -> { new Alert(Alert.AlertType.ERROR, "Error during adapter registration: " + throwable.getMessage()).showAndWait(); });
                     currentSelected.unload();
                 }
@@ -230,6 +256,24 @@ public class ExpertSelectionController {
 
     @FXML
     private void onDownload() {
+        // Determine course of action based on user intent (the button label value).
+        switch (downloadBtn.textProperty().getValue()) {
+            case "Download":
+                download();
+                return;
+            case "Load":
+                Expert currentSelected = selectedExpert.get();
+                loadAdapter(currentSelected);
+                return;
+            case "Unload":
+                unloadFromLLMServer();
+                return;
+            default:
+                throw new IllegalStateException("Download button label was set to an illegal value.");
+        }
+    }
+
+    private void download() {
         Expert currentSelected = selectedExpert.get();
         if (currentSelected == null || currentSelected.getSource() != Expert.Source.REMOTE) {
             new Alert(Alert.AlertType.INFORMATION, "Select a remote expert to download.",
@@ -301,6 +345,10 @@ public class ExpertSelectionController {
             activeDownloadHandle = null;
             resetDownloadButton();
         }
+    }
+
+    private void unloadFromLLMServer() {
+        assert selectedExpert != null : "Selected expert must not be null when the unload button is pressed.";
     }
 
     // ── Back button → return to workspace ────────────────────
