@@ -2,9 +2,11 @@ package com.mosaic.client.ui.screens.expert;
 
 import com.mosaic.client.Navigator;
 import com.mosaic.client.db.dao.AdapterDao;
+import com.mosaic.client.service.LLMServer;
 import com.mosaic.client.service.NetworkManager;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -67,6 +69,9 @@ public class ExpertSelectionController {
     @FXML private ProgressBar downloadProgress;
     @FXML private Label overlayMessage;
     @FXML private BorderPane inputRoot;
+
+    /** LLM server state */
+    private final ReadOnlyObjectProperty<LLMServer.State> llmServerState = NetworkManager.getInstance().llmServerStateProperty();
 
     /** Currently selected expert. */
     private final ObjectProperty<Expert> selectedExpert = new SimpleObjectProperty<>();
@@ -186,7 +191,6 @@ public class ExpertSelectionController {
             }
 
             // Cannot use this button with the base model (though the text should still change).
-            downloadBtn.setDisable(newValue == Expert.BASE_MODEL);
             detailSaveBtn.setVisible(newValue != Expert.BASE_MODEL);
             detailName.setEditable(newValue != Expert.BASE_MODEL);
             detailDomain.setEditable(newValue != Expert.BASE_MODEL);
@@ -206,7 +210,12 @@ public class ExpertSelectionController {
         });
 
         // Initial state
-        downloadBtn.setDisable(true);
+        downloadBtn.disableProperty().bind(
+                selectedExpert.isNull()
+                        .or(selectedExpert.isEqualTo(Expert.BASE_MODEL))
+                        .or(downloadBtn.textProperty().isEqualTo("Load").and(llmServerState.isEqualTo((LLMServer.State) LLMServer.State.CONNECTED).not()))
+                        .or(downloadBtn.textProperty().isEqualTo("Unload").and(llmServerState.isEqualTo((LLMServer.State) LLMServer.State.CONNECTED).not()))
+        );
         detailSaveBtn.setVisible(false);
         detailResetBtn.visibleProperty().bind(detailSaveBtn.visibleProperty());
 
@@ -380,7 +389,6 @@ public class ExpertSelectionController {
 
     private void resetDownloadButton() {
         downloadBtn.setText("Download");
-        downloadBtn.setDisable(selectedExpert.get() == null);
         if (downloadProgress != null) {
             downloadProgress.setVisible(false);
         }

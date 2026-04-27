@@ -270,6 +270,7 @@ public class MainWorkspaceController {
         updateChatPanel(llmServerState.get());
     }
 
+    /** Update the chat panel according to server state. */
     private void updateChatPanel(LLMServer.State state) {
         Expert active = Navigator.getActiveExpert();
         assert active != null : "Active adapter is null.";
