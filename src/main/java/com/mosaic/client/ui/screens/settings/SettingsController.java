@@ -75,7 +75,7 @@ public class SettingsController {
         errorLabel.setVisible(false);
  
         updateNetworkStatus();
-        Platform.runLater(() -> portField.getScene().getRoot().requestFocus());
+//        Platform.runLater(() -> portField.getScene().getRoot().requestFocus());
 
     }
 

@@ -127,7 +127,7 @@ public class ExpertSelectionController {
             while (c.next()) {
                 if (c.wasAdded()) {
                     c.getAddedSubList().forEach(e -> {
-                        allDomains.add(e.getDomain());
+                        Platform.runLater(() -> allDomains.add(e.getDomain()));
                         e.domainProperty().addListener((obs, oldV, newV) -> allDomains.add(newV));
                     });
                 }
@@ -582,6 +582,17 @@ public class ExpertSelectionController {
     // ── Load local adapters ────────────────────
 
     private void loadLocalAdapters() throws SQLException {
+        // Always run on application thread
+        if (!Platform.isFxApplicationThread()) {
+            Platform.runLater(() -> {
+                try {
+                    loadLocalAdapters();
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        }
+
         // Remove the current local adapters
         allExperts.removeAll(
                 allExperts.stream()
@@ -600,6 +611,17 @@ public class ExpertSelectionController {
      * experts to the list.
      */
     private void loadRemoteAdapters() {
+        // Always run on application thread
+        if (!Platform.isFxApplicationThread()) {
+            Platform.runLater(() -> {
+                try {
+                    loadLocalAdapters();
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        }
+
         NetworkManager net = NetworkManager.getInstance();
         if (!net.isRunning()) return;
 
