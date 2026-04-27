@@ -7,7 +7,10 @@ import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableSet;
+import javafx.collections.SetChangeListener;
 import javafx.collections.transformation.FilteredList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -70,6 +73,9 @@ public class ExpertSelectionController {
 
     /** Master (unfiltered) list of experts. */
     private ObservableList<Expert> allExperts;
+    
+    /** Set of domains. */
+    private ObservableSet<String> allDomains = FXCollections.observableSet();
 
     /** Adapter DAO */
     private final AdapterDao adapterDao = new AdapterDao();
@@ -103,8 +109,27 @@ public class ExpertSelectionController {
         loadRemoteAdapters();
 
         // ── AC1: Populate filter dropdowns ───────────────────
-        domainFilter.setItems(FXCollections.observableArrayList(
-                "All Domains", "Gardening", "Chess", "Remote"));
+        allDomains.addListener((SetChangeListener<String>) change -> updateDomainFilterItems());
+
+        // Initialize allDomains with current experts
+        allExperts.forEach(e -> {
+            allDomains.add(e.getDomain());
+            e.domainProperty().addListener((obs, oldV, newV) -> allDomains.add(newV));
+        });
+
+        // Listen for new experts being added
+        allExperts.addListener((ListChangeListener<Expert>) c -> {
+            while (c.next()) {
+                if (c.wasAdded()) {
+                    c.getAddedSubList().forEach(e -> {
+                        allDomains.add(e.getDomain());
+                        e.domainProperty().addListener((obs, oldV, newV) -> allDomains.add(newV));
+                    });
+                }
+            }
+        });
+
+        updateDomainFilterItems();
         domainFilter.setValue("All Domains");
 
         sourceFilter.setItems(FXCollections.observableArrayList(
@@ -195,6 +220,12 @@ public class ExpertSelectionController {
     }
 
     // ── AC1: Filter logic ────────────────────────────────────
+
+    private void updateDomainFilterItems() {
+        ObservableList<String> items = FXCollections.observableArrayList("All Domains");
+        items.addAll(allDomains.stream().sorted().toList());
+        domainFilter.setItems(items);
+    }
 
     private void applyFilters() {
         String domain = domainFilter.getValue();
