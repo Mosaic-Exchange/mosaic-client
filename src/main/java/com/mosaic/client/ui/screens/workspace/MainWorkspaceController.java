@@ -72,19 +72,15 @@ public class MainWorkspaceController {
     /** LLM server state */
     ReadOnlyObjectProperty<LLMServer.State> llmServerState = NetworkManager.getInstance().llmServerStateProperty();
 
-    // ── MW-2 fields ──────────────────────────────────────────
-    @FXML
-    private ListView<ChatSession> sessionListView;
+    @FXML private ListView<ChatSession> sessionListView;
 
-
-    // ── APP-MW-3 (#13) fields ────────────────────────────────
     @FXML private ScrollPane chatScrollPane;
     @FXML private VBox       chatHistory;
+    
+    /** Input area. */
     @FXML private TextArea   messageInput;
-
-    // ── TODO APP-MW-2 (#12): add @FXML session list field here
-
-    // ── APP-MW-4 (#14) fields ────────────────────────────────
+    
+    // Detail panel
     @FXML private Label headerExpertName;
     @FXML private Label headerExpertSource;
     @FXML private Label headerExpertMode;
@@ -93,10 +89,16 @@ public class MainWorkspaceController {
     @FXML private Label metaExpertSource;
     @FXML private Label metaAdapterFile;
     @FXML private Label metaExpertStatus;
-
-    // ── APP-MW-5 (#15) fields ────────────────────────────────
+    
+    // Buttons
     @FXML private Button clearContextBtn;
+    @FXML private Button newSessionBtn;
+    @FXML private Button endSessionBtn;
+    @FXML private Button switchExpertBtn;
+    @FXML private Button settingsBtn;
     @FXML private Button sendBtn;
+    
+    /** Overlay message (loading) */
     @FXML private Label inputAreaOverlay;
 
     @FXML
@@ -175,6 +177,7 @@ public class MainWorkspaceController {
                                    if (currentSession != null
                                            && currentSession.getSessionId() == session.getSessionId()) {
                                        currentSession = null;
+                                       Navigator.setActiveSession(null);
                                        chatHistory.getChildren().clear();
                                        messageInput.clear();
                                    }
@@ -208,10 +211,22 @@ public class MainWorkspaceController {
         sessionListView.getSelectionModel().selectedItemProperty().addListener(
             (obs, oldVal, newVal) -> {
                 if (newVal != null) {
+                    Navigator.setActiveSession(newVal);
                     loadChat(newVal);
                 }
             }
         );
+
+        // Restore active session from Navigator if it exists
+        ChatSession active = Navigator.getActiveSession();
+        if (active != null) {
+            for (ChatSession s : sessionItems) {
+                if (s.getSessionId() == active.getSessionId()) {
+                    sessionListView.getSelectionModel().select(s);
+                    break;
+                }
+            }
+        }
 
         // APP-MW-4 (#14): Load expert from current selections, or fall back to default Gardening Expert.
         ReadOnlyObjectProperty<Expert> activeExpert = Navigator.activeExpertProperty();
@@ -286,6 +301,8 @@ public class MainWorkspaceController {
         // Ignore if an inference is already in progress
         if (activeInferenceHandle != null) return;
 
+        blockInput();
+
         // Create a new session if none is active
         if (currentSession == null) {
             try {
@@ -295,6 +312,7 @@ public class MainWorkspaceController {
                 sessionListView.getSelectionModel().select(currentSession);
             } catch (SQLException e) {
                 e.printStackTrace();
+                unblockInput();
                 return;
             }
         }
@@ -348,12 +366,14 @@ public class MainWorkspaceController {
             @Override
             public void onComplete() {
                 activeInferenceHandle = null;
+                unblockInput();
                 persistAssistantMessage(responseText.toString());
             }
 
             @Override
             public void onError(String reason) {
                 activeInferenceHandle = null;
+                unblockInput();
                 if (responseText.isEmpty()) {
                     responseLabel.setText("[Error: " + reason + "]");
                 } else {
@@ -364,6 +384,7 @@ public class MainWorkspaceController {
             @Override
             public void onCancelled() {
                 activeInferenceHandle = null;
+                unblockInput();
                 if (responseText.isEmpty()) {
                     responseLabel.setText("[Cancelled]");
                 } else {
@@ -415,6 +436,7 @@ public class MainWorkspaceController {
         if (h != null) {
             h.cancel();
             activeInferenceHandle = null;
+            unblockInput();
         }
     }
 
@@ -443,6 +465,7 @@ public class MainWorkspaceController {
                        }
                    }
                    currentSession = null;
+                   Navigator.setActiveSession(null);
                    chatHistory.getChildren().clear();
                    messageInput.clear();
                    loadSessionList();
@@ -450,6 +473,28 @@ public class MainWorkspaceController {
     }
 
     // ── Helpers ──────────────────────────────────────────────
+    
+    private void blockInput() {
+        sessionListView.setDisable(true);
+        messageInput.setDisable(true);
+        clearContextBtn.setDisable(true);
+        newSessionBtn.setDisable(true);
+        endSessionBtn.setDisable(true);
+        switchExpertBtn.setDisable(true);
+        settingsBtn.setDisable(true);
+        sendBtn.setDisable(true);
+    }
+
+    private void unblockInput() {
+        sessionListView.setDisable(false);
+        messageInput.setDisable(false);
+        clearContextBtn.setDisable(false);
+        newSessionBtn.setDisable(false);
+        endSessionBtn.setDisable(false);
+        switchExpertBtn.setDisable(false);
+        settingsBtn.setDisable(false);
+        sendBtn.setDisable(false);
+    }
 
     private void appendUserMessage(String text) {
         HBox row = new HBox();

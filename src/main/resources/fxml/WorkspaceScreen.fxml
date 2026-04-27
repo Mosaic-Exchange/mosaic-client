@@ -37,8 +37,8 @@
             <Label fx:id="headerExpertSource" text="--" styleClass="label-muted"/>
             <Label fx:id="headerExpertMode" text="Inference" styleClass="label-muted"/>
             <Region HBox.hgrow="ALWAYS"/>
-            <Button text="Switch Expert" styleClass="btn-primary" onAction="#onSwitchExpert"/>
-            <Button text="Settings" styleClass="btn-primary" onAction="#onOpenSettings"/>
+            <Button fx:id="switchExpertBtn" text="Switch Expert" styleClass="btn-primary" onAction="#onSwitchExpert"/>
+            <Button fx:id="settingsBtn" text="Settings" styleClass="btn-primary" onAction="#onOpenSettings"/>
         </HBox>
     </top>
 
@@ -46,7 +46,7 @@
     <left>
         <VBox styleClass="workspace-sidebar" prefWidth="220" alignment="TOP_CENTER" spacing="10">
             <padding><Insets top="16" right="12" bottom="16" left="12"/></padding>
-            <Button text="New Session" onAction="#onNewSession"/>
+            <Button fx:id="newSessionBtn" text="New Session" onAction="#onNewSession"/>
             <ListView fx:id="sessionListView"/>
         </VBox>
     </left>
@@ -74,7 +74,7 @@
                                   promptText="Type a message… (Enter to send, Shift+Enter for new line)"/>
                         <Button fx:id="sendBtn" text="Send" styleClass="btn-cta" onAction="#onSend"/>
                     </HBox>
-                    <Label fx:id="inputAreaOverlay" disable="true"></Label>
+                    <Label fx:id="inputAreaOverlay" disable="true" />
                 </StackPane>
             </bottom>
         </BorderPane>

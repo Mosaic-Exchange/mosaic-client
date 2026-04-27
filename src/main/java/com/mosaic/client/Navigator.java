@@ -3,6 +3,7 @@ package com.mosaic.client;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import com.mosaic.client.db.model.ChatSession;
 import com.mosaic.client.ui.screens.expert.Expert;
 
 /**
@@ -20,6 +21,9 @@ public class Navigator {
 
     // Currently selected expert state, shared between screens.
     private static final ObjectProperty<Expert> activeExpert = new SimpleObjectProperty<>(Expert.BASE_MODEL);
+
+    // Currently selected chat session, shared between screens.
+    private static final ObjectProperty<ChatSession> activeSession = new SimpleObjectProperty<>();
 
     public static void init(MainLayoutController controller) {
         mainLayout = controller;
@@ -45,5 +49,22 @@ public class Navigator {
 
     public static ReadOnlyObjectProperty<Expert> activeExpertProperty() {
         return activeExpert;
+    }
+
+    /**
+     * Store the active chat session so the workspace can pick it up.
+     * @param session the chat session to set as active
+     */
+    public static void setActiveSession(ChatSession session) {
+        activeSession.set(session);
+    }
+
+    /** Returns the active session, or null if none is selected. */
+    public static ChatSession getActiveSession() {
+        return activeSession.get();
+    }
+
+    public static ReadOnlyObjectProperty<ChatSession> activeSessionProperty() {
+        return activeSession;
     }
 }

@@ -287,6 +287,33 @@
 }
 .btn-cta:hover { -fx-background-color: #A3C497; }
 
+/* CTA small button */
+.btn-cta-small {
+    -fx-background-color: #E4F0D0;
+    -fx-text-fill: #1A2C4C;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-padding: 8 15;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+.btn-cta-small:hover { -fx-background-color: #A3C497; }
+
+/* Secondary button — outlined, for lower-priority actions */
+.btn-secondary-small {
+    -fx-background-color: transparent;
+    -fx-text-fill: #1A2C4C;
+    -fx-font-size: 13px;
+    -fx-padding: 8 15;
+    -fx-border-color: #1A2C4C;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+.btn-secondary-small:hover {
+    -fx-background-color: #D0DCEE;
+}
+
 /* Label hierarchy */
 .label-title {
     -fx-text-fill: #1A2C4C;
