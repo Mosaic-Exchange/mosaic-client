@@ -289,8 +289,8 @@ public class MainWorkspaceController {
         // Persist user message
         try {
             Expert expert = Navigator.getActiveExpert();
-            String adapterId = (expert != null) ? expert.getAdapterFile() : null;
-            ChatMessage msg = new ChatMessage(currentSession.getSessionId(), "User", text, adapterId);
+            String adapterFilePath = (expert != null && expert != Expert.BASE_MODEL) ? expert.getAdapterFile() : null;
+            ChatMessage msg = new ChatMessage(currentSession.getSessionId(), "User", text, adapterFilePath);
             messageDao.create(msg);
         } catch (SQLException e) {
             e.printStackTrace();
@@ -374,9 +374,9 @@ public class MainWorkspaceController {
         if (currentSession == null || content.isEmpty()) return;
         try {
             Expert expert = Navigator.getActiveExpert();
-            String adapterId = (expert != null) ? expert.getAdapterFile() : null;
+            String adapterFilePath = (expert != null && expert != Expert.BASE_MODEL) ? expert.getAdapterFile() : null;
             ChatMessage msg = new ChatMessage(
-                    currentSession.getSessionId(), "Assistant", content, adapterId);
+                    currentSession.getSessionId(), "Assistant", content, adapterFilePath);
             messageDao.create(msg);
         } catch (SQLException e) {
             e.printStackTrace();

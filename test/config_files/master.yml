@@ -1,23 +1,7 @@
-# Mosaic configuration
-# Lives next to the runnable jar (or project root in dev).
-
-# Network port this node listens on
+---
+dataDir: "mosaic-shared/master"
+debugEnabled: false
+llmServerPort: 4000
+nodeType: "master"
 port: 7000
-
-llm-server-port: 4000
-
-# Node type: basic | seed | eviction | master
-node-type: master
-
-# Seed node to bootstrap into the cluster (host:port)
-# Leave empty to start as a standalone node.
-seed:
-
-# Debug snapshot file (written periodically while running)
-debug-file: mosaic-master-debug.txt
-
-# Set to true to enable periodic debug snapshots
-debug-enabled: true
-
-# Directory used to store the database and adapters (default: ~/.mosaic)
-data-dir: mosaic-shared/master
+seed: ""
