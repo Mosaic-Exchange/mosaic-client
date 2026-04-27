@@ -84,15 +84,19 @@
                     <Label text="Expert Details" styleClass="label-title"/>
                     <Separator/>
                     <Label text="Name" styleClass="label-muted"/>
-                    <TextField fx:id="detailName" text="—" editable="false" styleClass="label-body"/>
+                    <TextField fx:id="detailName" text="—" styleClass="label-body"/>
                     <Label text="Domain" styleClass="label-muted"/>
-                    <TextField fx:id="detailDomain" text="—" editable="false" styleClass="label-body"/>
+                    <TextField fx:id="detailDomain" text="—" styleClass="label-body"/>
                     <Label text="Source" styleClass="label-muted"/>
                     <Label fx:id="detailSource" text="—" styleClass="label-body"/>
                     <Label text="Adapter" styleClass="label-muted"/>
                     <Label fx:id="detailAdapter" text="—" styleClass="label-body" wrapText="true"/>
                     <Label text="Status" styleClass="label-muted"/>
                     <Label fx:id="detailStatus" text="—" styleClass="label-body"/>
+                    <HBox spacing="10" alignment="CENTER">
+                        <Button fx:id="detailSaveBtn" onAction="#onDetailSave" text="Save" styleClass="btn-cta-small" maxWidth="Infinity" visible="false"/>
+                        <Button fx:id="detailResetBtn" onAction="#onDetailReset" text="Reset" styleClass="btn-secondary-small" maxWidth="Infinity" visible="false"/>
+                    </HBox>
                 </VBox>
 
                 <!-- Spacer -->

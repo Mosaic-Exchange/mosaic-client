@@ -246,16 +246,6 @@ public class LLMServer {
                     return new AddAdapterResponse(null, null, Optional.of("Failed to copy adapter: File missing after copy"));
                 }
 
-                Path configFile = targetDir.toPath().resolve("adapter.yml");
-                if (!Files.exists(configFile)) {
-                    try {
-                        Files.delete(configFile);
-                    } catch (IOException e) {
-                        // Unexpected state, exit gracelessly
-                        throw new RuntimeException(e);
-                    }
-                }
-
                 return addAdapter(targetDir.getName());
             }
         };

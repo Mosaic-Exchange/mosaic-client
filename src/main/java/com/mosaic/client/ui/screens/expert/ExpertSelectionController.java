@@ -2,7 +2,6 @@ package com.mosaic.client.ui.screens.expert;
 
 import com.mosaic.client.Navigator;
 import com.mosaic.client.db.dao.AdapterDao;
-import com.mosaic.client.service.AdapterMetadata;
 import com.mosaic.client.service.NetworkManager;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
@@ -59,6 +58,8 @@ public class ExpertSelectionController {
     @FXML private Button confirmBtn;
     @FXML private Button downloadBtn;
     @FXML private Button addAdapterBtn;
+    @FXML private Button detailSaveBtn;
+    @FXML private Button detailResetBtn;
 
     @FXML private ProgressBar downloadProgress;
     @FXML private Label overlayMessage;
@@ -141,13 +142,11 @@ public class ExpertSelectionController {
         selectedExpert.bind(expertListView.getSelectionModel().selectedItemProperty());
 
         // Bind Detail Panel Labels using flatMap
-        detailName.textProperty().bind(selectedExpert.flatMap(Expert::nameProperty).orElse("—"));
-        detailDomain.textProperty().bind(selectedExpert.flatMap(Expert::domainProperty).orElse("—"));
         detailSource.textProperty().bind(selectedExpert.flatMap(Expert::sourceProperty).map(Object::toString).orElse("—"));
         detailAdapter.textProperty().bind(selectedExpert.flatMap(Expert::adapterFileProperty).orElse("—"));
         detailStatus.textProperty().bind(selectedExpert.flatMap(Expert::statusProperty).map(Object::toString).orElse("—"));
 
-        // Change download button based on expert
+        // Change a few things based on selected expert
         selectedExpert.addListener((observable, oldValue, newValue) -> {
             if (newValue == null) {
                 // Cannot use this button without an expert selected.
@@ -157,18 +156,28 @@ public class ExpertSelectionController {
 
             // Cannot use this button with the base model (though the text should still change).
             downloadBtn.setDisable(newValue == Expert.BASE_MODEL);
+            detailSaveBtn.setVisible(newValue != Expert.BASE_MODEL);
+            detailName.setEditable(newValue != Expert.BASE_MODEL);
+            detailDomain.setEditable(newValue != Expert.BASE_MODEL);
 
-            if (newValue.isRemote()) {
-                downloadBtn.setText("Download");
-            } else if (newValue.isLoaded()) {
-                downloadBtn.setText("Unload");
-            } else {
-                downloadBtn.setText("Load");
-            }
+            detailName.setText(newValue.getName());
+            detailDomain.setText(newValue.getDomain());
+
+            updateDownloadButton(newValue);
         });
 
-        // Initially disabled
+        // Selectively hide the save/reset buttons (reset button visibility bound to save button)
+        detailName.textProperty().addListener((observable, oldValue, newValue) -> {
+            updateDetailSaveButton(newValue, detailDomain.getText());
+        });
+        detailDomain.textProperty().addListener((observable, oldValue, newValue) -> {
+            updateDetailSaveButton(detailName.getText(), newValue);
+        });
+
+        // Initial state
         downloadBtn.setDisable(true);
+        detailSaveBtn.setVisible(false);
+        detailResetBtn.visibleProperty().bind(detailSaveBtn.visibleProperty());
 
         // Reactive styling for the status label
         selectedExpert.flatMap(Expert::statusProperty).addListener((obs, oldStatus, newStatus) -> {
@@ -246,6 +255,16 @@ public class ExpertSelectionController {
     }
 
     // ── Multi-function "download" button ────────────────
+
+    private void updateDownloadButton(Expert e) {
+        if (e.isRemote()) {
+            downloadBtn.setText("Download");
+        } else if (e.isLoaded()) {
+            downloadBtn.setText("Unload");
+        } else {
+            downloadBtn.setText("Load");
+        }
+    }
 
     @FXML
     private void onDownload() {
@@ -339,15 +358,12 @@ public class ExpertSelectionController {
         }
     }
 
-    private void loadAdapter(Expert currentSelected) {
+    private void loadAdapter(Expert expert) {
         lockScreen("Loading adapter to LLM server...");
 
         NetworkManager.getInstance().registerAdapter(
-                NetworkManager.getInstance().getAdaptersDir().resolve(currentSelected.getAdapterFile()),
+                NetworkManager.getInstance().getAdaptersDir().resolve(expert.getAdapterFile()),
                 response -> {
-                    // Re-enable input
-                    unlockScreen();
-
                     // Handle error responses
                     if (response.error().isPresent()) {
                         Platform.runLater(() -> {
@@ -355,17 +371,18 @@ public class ExpertSelectionController {
                                     "Failed to register adapter: " + response.error().get()
                             ).showAndWait();
                         });
+                        unlockScreen();
                         return;
                     }
 
-                    currentSelected.load(response.adapterId());
+                    expert.load(response.adapterId());
 
                     // Attempt database update
                     try {
-                        adapterDao.upsert(currentSelected);
+                        adapterDao.upsert(expert);
                     } catch (SQLException e) {
                         // Failed, reset server side ID.
-                        currentSelected.unload();
+                        expert.unload();
                         Platform.runLater(() -> {
                             new Alert(
                                     Alert.AlertType.ERROR,
@@ -374,6 +391,12 @@ public class ExpertSelectionController {
                             ).showAndWait();
                         });
                         return;
+                    } finally {
+                        // Update button
+                        updateDownloadButton(expert);
+
+                        // Re-enable input
+                        unlockScreen();
                     }
 
                     // Success!
@@ -383,7 +406,7 @@ public class ExpertSelectionController {
                 throwable -> {
                     unlockScreen();
                     Platform.runLater(() -> { new Alert(Alert.AlertType.ERROR, "Error during adapter registration: " + throwable.getMessage()).showAndWait(); });
-                    currentSelected.unload();
+                    expert.unload();
                 }
         );
     }
@@ -418,6 +441,9 @@ public class ExpertSelectionController {
         NetworkManager.getInstance().deregisterAdapter(
                 serverSideId,
                 unused -> {
+                    // Update button
+                    updateDownloadButton(expert);
+
                     // Re-enable input
                     unlockScreen();
 
@@ -454,6 +480,44 @@ public class ExpertSelectionController {
     private void onBack() {
         cancelActiveDownload();
         Navigator.showWorkspace();
+    }
+
+    // ── Detail save ────────────────────
+    private void updateDetailSaveButton(String name, String domain) {
+        if (selectedExpert.get().getName().equals(name) && selectedExpert.get().getDomain().equals(domain)) {
+            detailSaveBtn.setVisible(false);
+            return;
+        }
+        detailSaveBtn.setVisible(true);
+
+        // Disable saving if a name or domain is empty
+        detailSaveBtn.setDisable(name.isEmpty() || domain.isEmpty());
+    }
+
+    public void onDetailReset(ActionEvent unused) {
+        detailName.setText(selectedExpert.get().getName());
+        detailDomain.setText(selectedExpert.get().getDomain());
+    }
+
+    public void onDetailSave(ActionEvent unused) {
+        try {
+            adapterDao.upsert(
+                    selectedExpert.get().getAdapterFile(),
+                    detailName.getText(),
+                    detailDomain.getText(),
+                    selectedExpert.get().getServerSideId()
+            );
+        } catch (SQLException e) {
+            new Alert(Alert.AlertType.ERROR, "Failed to update adapter database: " + e.getMessage()).showAndWait();
+            onDetailReset(null);
+            return;
+        }
+
+        // DB operation succeeded
+        selectedExpert.get().setName(detailName.getText());
+        selectedExpert.get().setDomain(detailDomain.getText());
+
+        updateDetailSaveButton(selectedExpert.get().getName(), selectedExpert.get().getDomain());
     }
 
     // ── Load local adapters ────────────────────
@@ -532,19 +596,12 @@ public class ExpertSelectionController {
             return;
         }
 
-        Expert newExpert = new Expert("", "", Expert.Source.LOCAL, newAdapterDir.getName());
+        Expert newExpert = new Expert(newAdapterDir.getName(), "New adapter domain", Expert.Source.LOCAL, newAdapterDir.getName());
         try {
             adapterDao.upsert(newExpert);
         } catch (SQLException e) {
             new Alert(Alert.AlertType.ERROR, "Failed to update adapter database: " + e.getMessage()).showAndWait();
             return;
-        }
-
-        Path configFile = targetDir.toPath().resolve("adapter.yml");
-        if (!Files.exists(configFile)) {
-            new AdapterMetadata("", "").toFile(
-                    targetDir.toPath().resolve("adapter.yml")
-            );
         }
 
         try {
