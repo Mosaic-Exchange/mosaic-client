@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 
 
 public class LLMServer {
@@ -65,7 +66,7 @@ public class LLMServer {
             APIOperation.GENERATE, new URI("v1/generations"),
             APIOperation.ADD_ADAPTER, new URI("v1/adapters"),
             APIOperation.LIST_ADAPTERS, new URI("v1/adapters"),
-            APIOperation.REMOVE_ADAPTER, new URI("v1/adapters"),
+            APIOperation.REMOVE_ADAPTER, new URI("v1/adapters/"),
             APIOperation.HEALTH_CHECK, new URI("health"),
             APIOperation.SHUTDOWN, new URI("shutdown")
     );
@@ -79,8 +80,8 @@ public class LLMServer {
     // HTTP
     private HttpClient httpClient;
     private URI baseUri;
+    private final ReentrantLock lock = new ReentrantLock();
     private int lastId = 0;
-    private boolean processing = false;  // Lock on requests
 
     // Counter for unique request IDs, do not access directly (use getNewRequestId()).
     private final AtomicInteger requestIdCounter = new AtomicInteger(0);
@@ -149,7 +150,7 @@ public class LLMServer {
                 return new Task<>() {
                     @Override
                     protected HealthCheckResult call() {
-                        if (processing) {
+                        if (lock.isLocked()) {
                             // Current processing another request; don't update the value.
                             return getLastValue();
                         }
@@ -216,7 +217,7 @@ public class LLMServer {
     }
 
     private void ensureNoConcurrentRequest() throws IllegalCallerException {
-        if (this.processing) {
+        if (this.lock.isLocked()) {
             throw new IllegalCallerException("Only one request can be sent to the AI server at a time.");
         }
     }
@@ -229,20 +230,20 @@ public class LLMServer {
         return SERVER_DIR.resolve("adapters");
     }
 
-    public void registerAdapter(Path newAdapterDir, Consumer<AdapterResponse> onComplete, Consumer<Throwable> onFailure) {
-        Task<AdapterResponse> registrationTask = new Task<>() {
+    public void registerAdapter(Path newAdapterDir, Consumer<AddAdapterResponse> onComplete, Consumer<Throwable> onFailure) {
+        Task<AddAdapterResponse> registrationTask = new Task<>() {
             @Override
-            protected AdapterResponse call() throws Exception {
+            protected AddAdapterResponse call() throws Exception {
                 File targetDir = newAdapterTargetDir(newAdapterDir.toFile());
 
                 try {
                     FileUtils.copyDirectory(newAdapterDir.toFile(), targetDir);
                 } catch (IOException e) {
-                    return new AdapterResponse(null, null, Optional.of("Failed to copy adapter: " + e.getMessage()));
+                    return new AddAdapterResponse(null, null, Optional.of("Failed to copy adapter: " + e.getMessage()));
                 }
 
                 if (!targetDir.exists()) {
-                    return new AdapterResponse(null, null, Optional.of("Failed to copy adapter: File missing after copy"));
+                    return new AddAdapterResponse(null, null, Optional.of("Failed to copy adapter: File missing after copy"));
                 }
 
                 Path configFile = targetDir.toPath().resolve("adapter.yml");
@@ -274,6 +275,30 @@ public class LLMServer {
         new Thread(registrationTask).start();
     }
 
+    public void deregisterAdapter(String serverSideId, Consumer<Void> onComplete, Consumer<Throwable> onFailure) {
+        Task<Void> deregistrationTask = new Task<>() {
+            @Override
+            protected Void call() throws Exception {
+                removeAdapter(serverSideId);
+                return null;
+            }
+        };
+
+        deregistrationTask.setOnSucceeded(event -> {
+            if (onComplete != null) {
+                onComplete.accept(deregistrationTask.getValue());
+            }
+        });
+
+        deregistrationTask.setOnFailed(event -> {
+            if (onFailure != null) {
+                onFailure.accept(deregistrationTask.getException());
+            }
+        });
+
+        new Thread(deregistrationTask).start();
+    }
+
     private File newAdapterTargetDir(File newAdapterDir) {
         Path adaptersDir = getAdaptersDir();
         String originalName = newAdapterDir.getName();
@@ -291,21 +316,21 @@ public class LLMServer {
         return targetDir;
     }
 
-    public record AdapterResponse(
+    public record AddAdapterResponse(
             String adapterId,
             String adapterFilename,
             Optional<String> error
     ) {}
 
-    public final AdapterResponse addAdapter(String adapterDir) {
+    public final AddAdapterResponse addAdapter(String adapterDir) {
         if (!running()) {
-            return new AdapterResponse(null, null, Optional.of("Server not running"));
+            return new AddAdapterResponse(null, null, Optional.of("Server not running"));
         }
 
         ensureHttpClient();
         ensureNoConcurrentRequest();
 
-        processing = true;
+        lock.lock();
         try {
             URI target = this.baseUri.resolve(apiSpec.get(APIOperation.ADD_ADAPTER));
             JSONObject requestBody = new JSONObject();
@@ -328,12 +353,12 @@ public class LLMServer {
                         "Middleware server addAdapter returned bad HTTP status (%s). Body: %s"
                                 .formatted(response.statusCode(), response.body())
                 );
-                return new AdapterResponse(null, null,
+                return new AddAdapterResponse(null, null,
                         Optional.of("HTTP %d. Response body:\n%s".formatted(response.statusCode(), response.body())));
             }
 
             JSONObject responseBody = new JSONObject(response.body());
-            return new AdapterResponse(
+            return new AddAdapterResponse(
                     responseBody.getString("adapter_id"),
                     responseBody.getString("adapter_filename"),
                     Optional.empty()
@@ -343,9 +368,50 @@ public class LLMServer {
                     System.Logger.Level.ERROR,
                     "Error sending request to middleware server (%s).".formatted(e)
             );
-            return new AdapterResponse(null, null, Optional.of(e.toString()));
+            return new AddAdapterResponse(null, null, Optional.of(e.toString()));
         } finally {
-            processing = false;
+            lock.unlock();
+        }
+    }
+
+    public final void removeAdapter(String serverSideId) throws IOException, InterruptedException, URISyntaxException {
+        if (!running()) {
+            throw new IllegalStateException("Attempted to delete adapter while server not running.");
+        }
+
+        ensureHttpClient();
+        ensureNoConcurrentRequest();
+
+        lock.lock();
+        try {
+            URI target = this.baseUri.resolve(apiSpec.get(APIOperation.REMOVE_ADAPTER));
+            target = target.resolve(new URI(serverSideId));
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(target)
+                    .DELETE()
+                    .header("Accept", "application/json")
+                    .version(HttpClient.Version.HTTP_1_1)
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() != 200) {
+                System.getLogger("AIServer.addAdapter").log(
+                        System.Logger.Level.ERROR,
+                        "Middleware server addAdapter returned bad HTTP status (%s). Body: %s"
+                                .formatted(response.statusCode(), response.body())
+                );
+                throw new RuntimeException("Delete adapter operation fail (HTTP %d).".formatted(response.statusCode()));
+            }
+
+            JSONObject responseBody = new JSONObject(response.body());
+
+            if (!responseBody.getString("adapter_id").equals(serverSideId)) {
+                throw new RuntimeException("Delete adapter operation failed: Response adapter ID does not match request.");
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -365,51 +431,56 @@ public class LLMServer {
         ensureHttpClient();
         ensureNoConcurrentRequest();
 
-        URI target = this.baseUri.resolve(apiSpec.get(APIOperation.HEALTH_CHECK));
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(target)
-                .method("GET", HttpRequest.BodyPublishers.noBody())
-                .header("Accept-Encoding", "application/json")
-                .header("Content-Type", "application/json")
-                .version(HttpClient.Version.HTTP_1_1)
-                .build();
-
-        HttpResponse<String> response;
+        lock.lock();
         try {
-            response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        } catch (Exception e) {
-            if (state.get().equals(State.CONNECTED)) {
+            URI target = this.baseUri.resolve(apiSpec.get(APIOperation.HEALTH_CHECK));
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(target)
+                    .method("GET", HttpRequest.BodyPublishers.noBody())
+                    .header("Accept-Encoding", "application/json")
+                    .header("Content-Type", "application/json")
+                    .version(HttpClient.Version.HTTP_1_1)
+                    .build();
+
+            HttpResponse<String> response;
+            try {
+                response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            } catch (Exception e) {
+                if (state.get().equals(State.CONNECTED)) {
+                    System.getLogger("AIServer.healthCheck").log(
+                            System.Logger.Level.ERROR,
+                            "Middleware server unreachable for health check (%s).".formatted(e)
+                    );
+                }
+                return new HealthCheckResult(false, false, Optional.of(e.toString()));
+            }
+
+            if (response.statusCode() != 200) {
                 System.getLogger("AIServer.healthCheck").log(
                         System.Logger.Level.ERROR,
-                        "Middleware server unreachable for health check (%s).".formatted(e)
+                        "Middleware server health check returned bad HTTP status (%s).".formatted(response.statusCode())
+                );
+                return new HealthCheckResult(false, false, Optional.of(response.toString()));
+            } else if (
+                    lastHealthCheck.get().error().isPresent()
+                            && lastHealthCheck.get().error().get().contains("Exception")
+            ) {
+                System.getLogger("AIServer.healthCheck").log(
+                        System.Logger.Level.INFO,
+                        "Connection (re)established (middleware server health check responded with HTTP 200 OK)."
                 );
             }
-            return new HealthCheckResult(false, false, Optional.of(e.toString()));
-        }
 
-        if (response.statusCode() != 200) {
-            System.getLogger("AIServer.healthCheck").log(
-                    System.Logger.Level.ERROR,
-                    "Middleware server health check returned bad HTTP status (%s).".formatted(response.statusCode())
+            JSONObject responseBody = new JSONObject(response.body());
+
+            return new HealthCheckResult(
+                    responseBody.getString("middleware").equals("ok"),
+                    responseBody.getString("llama_server").equals("ok"),
+                    Optional.empty()
             );
-            return new HealthCheckResult(false, false, Optional.of(response.toString()));
-        } else if (
-                lastHealthCheck.get().error().isPresent()
-                        && lastHealthCheck.get().error().get().contains("Exception")
-        ) {
-            System.getLogger("AIServer.healthCheck").log(
-                    System.Logger.Level.INFO,
-                    "Connection (re)established (middleware server health check responded with HTTP 200 OK)."
-            );
+        } finally {
+            lock.unlock();
         }
-
-        JSONObject responseBody = new JSONObject(response.body());
-
-        return new HealthCheckResult(
-                responseBody.getString("middleware").equals("ok"),
-                responseBody.getString("llama_server").equals("ok"),
-                Optional.empty()
-        );
     }
 
 }

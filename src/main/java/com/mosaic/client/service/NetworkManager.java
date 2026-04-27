@@ -318,7 +318,7 @@ public class NetworkManager {
      * Registers a new adapter by copying its directory to the internal adapters folder
      * and notifying the LLM server.
      */
-    public void registerAdapter(Path newAdapterDir, Consumer<LLMServer.AdapterResponse> onComplete, Consumer<Throwable> onFailure) {
+    public void registerAdapter(Path newAdapterDir, Consumer<LLMServer.AddAdapterResponse> onComplete, Consumer<Throwable> onFailure) {
         if (llmServer == null) {
             if (onFailure != null) {
                 Platform.runLater(() -> onFailure.accept(new IllegalStateException("LLM Server not started")));
@@ -326,6 +326,19 @@ public class NetworkManager {
             return;
         }
         llmServer.registerAdapter(newAdapterDir, onComplete, onFailure);
+    }
+
+    /**
+     * Deregister an adapter. Delegates to the LLMServer class.
+     */
+    public void deregisterAdapter(String serverSideId, Consumer<Void> onComplete, Consumer<Throwable> onFailure) {
+        if (llmServer == null) {
+            if (onFailure != null) {
+                Platform.runLater(() -> onFailure.accept(new IllegalStateException("LLM Server not started")));
+            }
+            return;
+        }
+        llmServer.deregisterAdapter(serverSideId, onComplete, onFailure);
     }
 
     // -- Utilities --

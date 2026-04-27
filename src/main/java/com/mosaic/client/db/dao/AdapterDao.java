@@ -36,6 +36,25 @@ public class AdapterDao {
         }
     }
 
+    public void upsert(String adapterFile, String name, String domain, String serverSideId) throws SQLException {
+        String sql = "INSERT INTO Local_Adapters (file_path, name, domain, server_side_id) " +
+                "VALUES (?, ?, ?, ?) " +
+                "ON CONFLICT(file_path) DO UPDATE SET " +
+                "name = ?, " +
+                "domain = ?, " +
+                "server_side_id = ?";
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+            ps.setString(1, adapterFile);
+            ps.setString(2, name);
+            ps.setString(3, domain);
+            ps.setString(4, serverSideId);
+            ps.setString(5, name);
+            ps.setString(6, domain);
+            ps.setString(7, serverSideId);
+            ps.executeUpdate();
+        }
+    }
+
     public List<Expert> findAll() throws SQLException {
         String sql = "SELECT name, domain, file_path, server_side_id "
                    + "FROM Local_Adapters ORDER BY name ASC";

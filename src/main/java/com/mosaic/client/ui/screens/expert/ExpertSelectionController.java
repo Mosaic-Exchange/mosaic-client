@@ -13,6 +13,7 @@ import javafx.collections.transformation.FilteredList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import org.apache.commons.io.FileUtils;
@@ -60,6 +61,8 @@ public class ExpertSelectionController {
     @FXML private Button addAdapterBtn;
 
     @FXML private ProgressBar downloadProgress;
+    @FXML private Label overlayMessage;
+    @FXML private BorderPane inputRoot;
 
     /** Currently selected expert. */
     private final ObjectProperty<Expert> selectedExpert = new SimpleObjectProperty<>();
@@ -229,56 +232,20 @@ public class ExpertSelectionController {
         }
     }
 
-    private void loadAdapter(Expert currentSelected) {
-        downloadBtn.getScene().getRoot().setDisable(true);
-
-        NetworkManager.getInstance().registerAdapter(
-                NetworkManager.getInstance().getAdaptersDir().resolve(currentSelected.getAdapterFile()),
-                response -> {
-                    // Disable input
-                    downloadBtn.getScene().getRoot().setDisable(false);
-
-                    // Handle error responses
-                    if (response.error().isPresent()) {
-                        Platform.runLater(() -> {
-                            new Alert(Alert.AlertType.ERROR,
-                                    "Failed to register adapter: " + response.error().get()
-                            ).showAndWait();
-                        });
-                        return;
-                    }
-
-                    currentSelected.load(response.adapterId());
-
-                    // Attempt database update
-                    try {
-                        adapterDao.upsert(currentSelected);
-                    } catch (SQLException e) {
-                        // Failed, reset server side ID.
-                        currentSelected.unload();
-                        Platform.runLater(() -> {
-                            new Alert(
-                                    Alert.AlertType.ERROR,
-                                    "Failed to register adapter: Could not update server side ID in database (%s)."
-                                            .formatted(e.getMessage())
-                            ).showAndWait();
-                        });
-                        return;
-                    }
-
-                    // Success!
-                    System.getLogger("ExpertSelectionController").log(System.Logger.Level.INFO,
-                            "Registered adapter with response: " + response);
-                },
-                throwable -> {
-                    downloadBtn.getScene().getRoot().setDisable(false);
-                    Platform.runLater(() -> { new Alert(Alert.AlertType.ERROR, "Error during adapter registration: " + throwable.getMessage()).showAndWait(); });
-                    currentSelected.unload();
-                }
-        );
+    // ── Helper ────────────────
+    private void lockScreen(String message) {
+        inputRoot.setDisable(true);
+        overlayMessage.setText(message);
+        overlayMessage.setDisable(false);
     }
 
-    // ── AC5: Download adapter from remote peer ────────────────
+    private void unlockScreen() {
+        inputRoot.setDisable(false);
+        overlayMessage.setDisable(true);
+        overlayMessage.setText("");
+    }
+
+    // ── Multi-function "download" button ────────────────
 
     @FXML
     private void onDownload() {
@@ -288,11 +255,10 @@ public class ExpertSelectionController {
                 download();
                 return;
             case "Load":
-                Expert currentSelected = selectedExpert.get();
-                loadAdapter(currentSelected);
+                loadAdapter(selectedExpert.get());
                 return;
             case "Unload":
-                unloadFromLLMServer();
+                unloadFromLLMServer(selectedExpert.get());
                 return;
             default:
                 throw new IllegalStateException("Download button label was set to an illegal value.");
@@ -373,8 +339,113 @@ public class ExpertSelectionController {
         }
     }
 
-    private void unloadFromLLMServer() {
-        assert selectedExpert != null : "Selected expert must not be null when the unload button is pressed.";
+    private void loadAdapter(Expert currentSelected) {
+        lockScreen("Loading adapter to LLM server...");
+
+        NetworkManager.getInstance().registerAdapter(
+                NetworkManager.getInstance().getAdaptersDir().resolve(currentSelected.getAdapterFile()),
+                response -> {
+                    // Re-enable input
+                    unlockScreen();
+
+                    // Handle error responses
+                    if (response.error().isPresent()) {
+                        Platform.runLater(() -> {
+                            new Alert(Alert.AlertType.ERROR,
+                                    "Failed to register adapter: " + response.error().get()
+                            ).showAndWait();
+                        });
+                        return;
+                    }
+
+                    currentSelected.load(response.adapterId());
+
+                    // Attempt database update
+                    try {
+                        adapterDao.upsert(currentSelected);
+                    } catch (SQLException e) {
+                        // Failed, reset server side ID.
+                        currentSelected.unload();
+                        Platform.runLater(() -> {
+                            new Alert(
+                                    Alert.AlertType.ERROR,
+                                    "Failed to register adapter: Could not update server side ID in database (%s)."
+                                            .formatted(e.getMessage())
+                            ).showAndWait();
+                        });
+                        return;
+                    }
+
+                    // Success!
+                    System.getLogger("ExpertSelectionController").log(System.Logger.Level.INFO,
+                            "Registered adapter with response: " + response);
+                },
+                throwable -> {
+                    unlockScreen();
+                    Platform.runLater(() -> { new Alert(Alert.AlertType.ERROR, "Error during adapter registration: " + throwable.getMessage()).showAndWait(); });
+                    currentSelected.unload();
+                }
+        );
+    }
+
+    private void unloadFromLLMServer(Expert expert) {
+        assert expert != null : "Cannot unload null expert.";
+        lockScreen("Removing adapter...");
+
+        // Attempt database update
+        try {
+            adapterDao.upsert(
+                    expert.getAdapterFile(),
+                    expert.getName(),
+                    expert.getDomain(),
+                    null
+            );
+        } catch (SQLException e) {
+            // Failed
+            new Alert(
+                    Alert.AlertType.ERROR,
+                    ("Could not remove server side ID in database (%s). The operation will not proceed, as errors could " +
+                            "result on restart.")
+                            .formatted(e.getMessage())
+            ).showAndWait();
+            unlockScreen();
+            return;
+        }
+
+        String serverSideId = expert.getServerSideId();
+        expert.unload();
+
+        NetworkManager.getInstance().deregisterAdapter(
+                serverSideId,
+                unused -> {
+                    // Re-enable input
+                    unlockScreen();
+
+                    // Success!
+                    System.getLogger("ExpertSelectionController").log(System.Logger.Level.INFO,
+                            "Deregistered adapter with id: " + serverSideId
+                    );
+                },
+                exception -> {
+                    System.getLogger("ExpertSelectionController").log(System.Logger.Level.ERROR,
+                            "Deregistering adapter with id '%s' failed (%s).".formatted(
+                                    serverSideId,
+                                    exception.getMessage()
+                            )
+                    );
+
+                    Platform.runLater(() -> {
+                            new Alert(
+                                    Alert.AlertType.WARNING,
+                                    ("Removing the adapter from the server failed (%s). It is not accessible, but " +
+                                            "it will still take up storage space until removed manually.")
+                                            .formatted(exception.getMessage())
+                            ).showAndWait();
+                    });
+
+                    unlockScreen();
+                }
+        );
     }
 
     // ── Back button → return to workspace ────────────────────
@@ -397,26 +468,6 @@ public class ExpertSelectionController {
 
         allExperts.add(Expert.BASE_MODEL);
         allExperts.addAll(adapterDao.findAll());
-
-        // Reload local adapters
-//        Files.list(NetworkManager.getInstance().getAdaptersDir())
-//                .filter(Files::isDirectory)
-//                .forEach(
-//                        (Path dir) -> {
-//                            File child = dir.resolve("adapter.yml").toFile();
-//                            if (child.exists() && child.isFile()) {
-//                                AdapterMetadata metadata = AdapterMetadata.fromFile(child.toPath());
-//                                allExperts.add(
-//                                        new Expert(
-//                                                metadata.name(),
-//                                                metadata.domain(),
-//                                                Expert.Source.LOCAL,
-//                                                dir.getFileName().toString()
-//                                        )
-//                                );
-//                            };
-//                        }
-//                );
     }
 
     // ── Network discovery ────────────────────────────────────
