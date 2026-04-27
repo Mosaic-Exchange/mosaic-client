@@ -21,6 +21,7 @@ public class MosaicApp extends Application {
 
         try {
             NetworkManager.getInstance().start(
+                    config.host(),
                     config.port(),
                     config.llmServerPort(),
                     config.nodeType(),

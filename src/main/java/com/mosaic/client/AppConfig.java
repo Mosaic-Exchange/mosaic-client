@@ -28,6 +28,11 @@ public class AppConfig {
     private int llmServerPort = 4000;
     private String nodeType = "basic";
     private String seed = "";
+    /**
+     * Host/IP address to advertise to other nodes (must be reachable from peers).
+     * Example: "192.168.1.23"
+     */
+    private String host = "127.0.0.1";
     private boolean debugEnabled = false;
     private String dataDir = System.getProperty("user.home") + "/.mosaic";
 
@@ -47,6 +52,7 @@ public class AppConfig {
     public void setLlmServerPort(int port)        { this.llmServerPort = port; }
     public void setNodeType(String nodeType)      { this.nodeType = nodeType; }
     public void setSeed(String seed)              { this.seed = seed != null ? seed : ""; }
+    public void setHost(String host)              { this.host = host != null ? host : "127.0.0.1"; }
     public void setDebugEnabled(boolean enabled)  { this.debugEnabled = enabled; }
     public void setDataDir(String dataDir)        { this.dataDir = dataDir; }
 
@@ -137,9 +143,11 @@ public class AppConfig {
 
         if (config.seed == null)     config.seed = "";
         if (config.nodeType == null) config.nodeType = "basic";
+        if (config.host == null || config.host.isBlank()) config.host = "127.0.0.1";
         if (config.dataDir == null)  config.dataDir = System.getProperty("user.home") + "/.mosaic";
 
         System.out.println("[config] Loaded " + filename
+            + " — host=" + config.host
             + " — port=" + config.port
             + " llm-port=" + config.llmServerPort
             + " type=" + config.nodeType
@@ -169,6 +177,10 @@ public class AppConfig {
         String content = """
                 # Mosaic configuration
                 # Lives next to the runnable jar (or project root in dev).
+
+                # Host/IP this node advertises to peers (must be reachable from other laptops)
+                # Example: 192.168.1.23
+                host: 127.0.0.1
 
                 # Network port this node listens on
                 port: 7001
@@ -214,6 +226,7 @@ public class AppConfig {
     public int llmServerPort()    { return llmServerPort; }
     public String nodeType()      { return nodeType; }
     public String seed()          { return seed; }
+    public String host()          { return host; }
     public boolean debugEnabled() { return debugEnabled; }
     public Path dataDir()         { return Path.of(dataDir); }
     public Path logDir()          { return dataDir().resolve("logs"); }

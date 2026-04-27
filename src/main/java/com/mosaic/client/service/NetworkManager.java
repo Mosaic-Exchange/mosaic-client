@@ -68,7 +68,7 @@ public class NetworkManager {
      * @param logDir        directory for log files (e.g. "logs")
      * @param seeds         seed addresses as "host:port" strings; may be empty
      */
-    public void start(int port, int llmServerPort, String nodeType, boolean debugEnabled,
+    public void start(String host, int port, int llmServerPort, String nodeType, boolean debugEnabled,
                       Path mosaicDir, Path logDir, String... seeds) throws Exception {
         if (running) return;
 
@@ -77,7 +77,7 @@ public class NetworkManager {
         Files.createDirectories(logDir);
 
         RumorConfig config = new RumorConfig();
-        config.port(port).nodeType(NodeType.fromString(nodeType));
+        config.host(host).port(port).nodeType(NodeType.fromString(nodeType));
 
         for (String seed : seeds) {
             if (seed == null || seed.isBlank()) continue;
@@ -115,8 +115,8 @@ public class NetworkManager {
     /**
      * Convenience overload for callers that don't need debug (e.g. Settings restart).
      */
-    public void start(int port, int llmServerPort, String nodeType, Path mosaicDir, Path logDir, String... seeds) throws Exception {
-        start(port, llmServerPort, nodeType, false, mosaicDir, logDir, seeds);
+    public void start(String host, int port, int llmServerPort, String nodeType, Path mosaicDir, Path logDir, String... seeds) throws Exception {
+        start(host, port, llmServerPort, nodeType, false, mosaicDir, logDir, seeds);
     }
 
     /**

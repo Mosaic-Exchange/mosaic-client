@@ -209,6 +209,7 @@ public class SettingsController {
         net.stop();
         try {
             net.start(
+                config.host(),
                 config.port(),
                 config.llmServerPort(),
                 config.nodeType(),
