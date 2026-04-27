@@ -34,7 +34,7 @@ while [[ $# -gt 0 ]]; do
       if [[ -n "${2:-}" ]]; then
         # Ensure path is absolute for Maven
         CONFIG_PATH="$2"
-        if [[ "$CONFIG_PATH" != /* ]]; then
+        if [[ "$CONFIG_PATH" != /* && "$CONFIG_PATH" != ?:* ]]; then
           CONFIG_PATH="$(pwd)/$CONFIG_PATH"
         fi
         MVN_EXTRA+=("-Djavafx.args=--config $CONFIG_PATH")
