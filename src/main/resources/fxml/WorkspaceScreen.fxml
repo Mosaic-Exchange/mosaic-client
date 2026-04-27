@@ -11,6 +11,7 @@
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.control.ListView?>
+<?import javafx.scene.layout.StackPane?>
 
 <!--
     Main Workspace screen — layout structure only (APP-MW-1, #11).
@@ -65,13 +66,16 @@
             </center>
             <bottom>
                 <!-- AC1: text input field, AC2: Send button -->
-                <HBox styleClass="input-area" spacing="8" alignment="CENTER">
-                    <padding><Insets top="8" right="12" bottom="8" left="12"/></padding>
-                    <TextArea fx:id="messageInput" styleClass="message-input"
-                              HBox.hgrow="ALWAYS" prefRowCount="2" wrapText="true"
-                              promptText="Type a message… (Enter to send, Shift+Enter for new line)"/>
-                    <Button fx:id="sendBtn" text="Send" styleClass="btn-cta" onAction="#onSend"/>
-                </HBox>
+                <StackPane>
+                    <HBox styleClass="input-area" spacing="8" alignment="CENTER">
+                        <padding><Insets top="8" right="12" bottom="8" left="12"/></padding>
+                        <TextArea fx:id="messageInput" styleClass="message-input"
+                                  HBox.hgrow="ALWAYS" prefRowCount="2" wrapText="true"
+                                  promptText="Type a message… (Enter to send, Shift+Enter for new line)"/>
+                        <Button fx:id="sendBtn" text="Send" styleClass="btn-cta" onAction="#onSend"/>
+                    </HBox>
+                    <Label fx:id="inputAreaOverlay" disable="true"></Label>
+                </StackPane>
             </bottom>
         </BorderPane>
     </center>

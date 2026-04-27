@@ -69,6 +69,9 @@ public class MainWorkspaceController {
     /** Observable list backing the sidebar ListView. */
     private ObservableList<ChatSession> sessionItems;
 
+    /** LLM server state */
+    ReadOnlyObjectProperty<LLMServer.State> llmServerState = NetworkManager.getInstance().llmServerStateProperty();
+
     // ── MW-2 fields ──────────────────────────────────────────
     @FXML
     private ListView<ChatSession> sessionListView;
@@ -94,6 +97,7 @@ public class MainWorkspaceController {
     // ── APP-MW-5 (#15) fields ────────────────────────────────
     @FXML private Button clearContextBtn;
     @FXML private Button sendBtn;
+    @FXML private Label inputAreaOverlay;
 
     @FXML
     public void initialize() {
@@ -241,27 +245,36 @@ public class MainWorkspaceController {
         }
 
         // Disable the chat panel if the current adapter is local, and the server is unavailable.
-        ReadOnlyObjectProperty<LLMServer.State> serverState = NetworkManager.getInstance().llmServerStateProperty();
-        serverState.addListener(
+        llmServerState.addListener(
                 (observable, oldValue, newValue) -> {
-                    Expert active = Navigator.getActiveExpert();
-                    setChatPanelDisabled(
-                            (active == null || active.getSource() != Expert.Source.LOCAL) &&
-                                    newValue != LLMServer.State.CONNECTED
-                    );
+                    updateChatPanel(newValue);
                 }
         );
 
         // Initial state
+        updateChatPanel(llmServerState.get());
+    }
+
+    private void updateChatPanel(LLMServer.State state) {
         Expert active = Navigator.getActiveExpert();
-        setChatPanelDisabled((active == null || active.getSource() != Expert.Source.LOCAL) &&
-                serverState.get() != LLMServer.State.CONNECTED
+        assert active != null : "Active adapter is null.";
+
+        setChatPanelDisabled(
+                active.getSource() == Expert.Source.LOCAL &&
+                        state != LLMServer.State.CONNECTED
         );
+
+        switch (state) {
+            case CONNECTING -> inputAreaOverlay.setText("Connecting to the LLM server...");
+            case DISCONNECTED -> inputAreaOverlay.setText("LLM server disconnected. Try restarting the app, or using a remote expert.");
+            case CONNECTED -> inputAreaOverlay.setText("");
+        }
     }
 
     public synchronized void setChatPanelDisabled(boolean disabled) {
         messageInput.setDisable(disabled);
         sendBtn.setDisable(disabled);
+        inputAreaOverlay.setDisable(!disabled);
     }
 
     // ── AC3: Send button handler ─────────────────────────────
