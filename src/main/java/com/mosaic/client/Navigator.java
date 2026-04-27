@@ -19,7 +19,7 @@ public class Navigator {
     private static MainLayoutController mainLayout;
 
     // Currently selected expert state, shared between screens.
-    private static final ObjectProperty<Expert> activeExpert = new SimpleObjectProperty<>();
+    private static final ObjectProperty<Expert> activeExpert = new SimpleObjectProperty<>(Expert.BASE_MODEL);
 
     public static void init(MainLayoutController controller) {
         mainLayout = controller;
