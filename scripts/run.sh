@@ -19,4 +19,4 @@ if [[ ! -f "$JAR" ]]; then
 fi
 
 cd "${ROOT}"
-exec java "${JAVA_OPTS[@]}" -jar "$JAR" "$@"
+exec java ${JAVA_OPTS[@]+"${JAVA_OPTS[@]}"} -jar "$JAR" "$@"

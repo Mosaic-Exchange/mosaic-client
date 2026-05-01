@@ -2,3 +2,4 @@ target/
 *.log
 mosaic-shared/
 node_modules/
+.mosaic*

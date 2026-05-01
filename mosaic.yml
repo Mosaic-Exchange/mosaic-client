@@ -1,8 +1,18 @@
 ---
-host: "172.20.10.13"
-dataDir: "C:\\Users\\mahil\\.mosaic"
+host: "127.0.0.1"
+dataDir: "/Users/devi/mosaic/app/.mosaic-1"
 debugEnabled: true
 llmServerPort: 4000
 nodeType: "basic"
-port: 7000
-seed: "172.20.10.6:7000"
+port: 7002
+seed: "127.0.0.1:7001"
+
+
+# ---
+# host: "127.0.0.1"
+# dataDir: "/Users/devi/mosaic/app/.mosaic-2"
+# debugEnabled: true
+# llmServerPort: 4000
+# nodeType: "basic"
+# port: 7003
+# seed: "127.0.0.1:7001"

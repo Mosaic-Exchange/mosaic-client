@@ -54,7 +54,7 @@ echo "run.sh: ensuring dependencies are ready..."
 
 if [[ -f "${ROOT}/exchange-server/pom.xml" ]]; then
   echo "run.sh: installing org.rumor:rumor (exchange-server) into local Maven repo..."
-  "${MAVEN}" "${MVN_EXTRA[@]}" -f "${ROOT}/exchange-server/pom.xml" install -DskipTests
+  "${MAVEN}" ${MVN_EXTRA[@]+"${MVN_EXTRA[@]}"} -f "${ROOT}/exchange-server/pom.xml" install -DskipTests
 fi
 
 DEMO_YAML="${ROOT}/target/mosaic.yml"
@@ -78,11 +78,11 @@ seed:
 debug-file: mosaic-debug.txt
 
 # Set to true to enable periodic debug snapshots
-debug-enabled: false
+debug-enabled: true
 EOF
   echo "run.sh: wrote demo ${DEMO_YAML}"
 fi
 
 echo "run.sh: executing ${GOAL}..."
 # Using compile to ensure everything is up to date before running
-"${MAVEN}" "${MVN_EXTRA[@]}" -f test-pom.xml compile "${GOAL}" "$@"
+"${MAVEN}" ${MVN_EXTRA[@]+"${MVN_EXTRA[@]}"} -f test-pom.xml compile "${GOAL}" "$@"

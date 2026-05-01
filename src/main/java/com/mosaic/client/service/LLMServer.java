@@ -73,6 +73,7 @@ public class LLMServer {
 
     // Process management
     private Process proc;
+    private boolean ownsProcess;
     private String host;
     private int port;
     private ScheduledService<HealthCheckResult> healthMonitor;
@@ -109,7 +110,7 @@ public class LLMServer {
     public ReadOnlyObjectProperty<State> stateProperty() { return state; }
 
     public boolean running() {
-        return proc != null && proc.isAlive();
+        return (proc != null && proc.isAlive()) || state.get() == State.CONNECTED;
     }
 
     public void start(String host, int port, HttpClient httpClient, Path logDir) throws URISyntaxException, IOException {
@@ -118,17 +119,30 @@ public class LLMServer {
         logFile = logDir.resolve(LOG_NAME);
         Files.createDirectories(logDir);
 
+        this.httpClient = httpClient;
+        this.host = host;
+        this.port = port;
+        this.baseUri = new URI("http", "", this.host, this.port, "/", "", "");
+        this.ownsProcess = false;
+
         state.setValue(State.CONNECTING);
+
+        // If a compatible server is already running, attach instead of spawning another one.
+        HealthCheckResult initialHealth = healthCheck();
+        if (initialHealth.allGood()) {
+            System.getLogger("AIServer").log(
+                    System.Logger.Level.INFO,
+                    "Attached to existing AI server at %s:%d.".formatted(host, port)
+            );
+            state.setValue(State.CONNECTED);
+            startHealthMonitor();
+            return;
+        }
 
         System.getLogger("AIServer").log(
                 System.Logger.Level.INFO,
                 "Starting AI server at %s:%d. Logs will be directed to %s.".formatted(host, port, logFile.toString())
         );
-
-        this.httpClient = httpClient;
-        this.host = host;
-        this.port = port;
-        this.baseUri = new URI("http", "", this.host, this.port, "/", "", "");
 
         // Determine the command based on OS
         String os = System.getProperty("os.name").toLowerCase();
@@ -157,8 +171,16 @@ public class LLMServer {
                 .redirectErrorStream(true)
                 .redirectOutput(logFile.toFile())
                 .start();
+        ownsProcess = true;
+        startHealthMonitor();
+    }
 
-        // Start health monitor
+    private void startHealthMonitor() {
+        if (healthMonitor != null) {
+            healthMonitor.cancel();
+            healthMonitor = null;
+        }
+
         healthMonitor = new ScheduledService<>() {
             @Override
             protected Task<HealthCheckResult> createTask() {
@@ -177,9 +199,9 @@ public class LLMServer {
         healthMonitor.setPeriod(healthCheckPeriod);
         healthMonitor.lastValueProperty().addListener(
             (observable, oldValue, newValue) -> {
-                if (newValue.allGood()) {
+                if (newValue != null && newValue.allGood()) {
                     state.setValue(State.CONNECTED);
-                } else if (state.get().equals(State.CONNECTED)) {
+                } else {
                     state.setValue(State.DISCONNECTED);
                 }
             }
@@ -189,40 +211,44 @@ public class LLMServer {
     }
 
     public void stop() {
-        if (!running()) return;
-
-        System.getLogger("AIServer").log(
-                System.Logger.Level.INFO,
-                "Stopping AI server at %s:%d. Logs can be found in %s.".formatted(host, port, logFile.toString())
-        );
-
         if (healthMonitor != null) {
             healthMonitor.cancel();
             healthMonitor = null;
         }
 
-        try {
-            ensureHttpClient();
-            URI target = baseUri.resolve(apiSpec.get(APIOperation.SHUTDOWN));
-            HttpRequest req = HttpRequest.newBuilder()
-                    .uri(target)
-                    .POST(HttpRequest.BodyPublishers.noBody())
-                    .version(HttpClient.Version.HTTP_1_1)
-                    .build();
-            httpClient.send(req, HttpResponse.BodyHandlers.discarding());
-        } catch (Exception ignored) {
-            // Server may already be down; fall through to force-kill
+        if (ownsProcess && proc != null) {
+            System.getLogger("AIServer").log(
+                    System.Logger.Level.INFO,
+                    "Stopping AI server at %s:%d. Logs can be found in %s.".formatted(host, port, logFile.toString())
+            );
+
+            try {
+                ensureHttpClient();
+                URI target = baseUri.resolve(apiSpec.get(APIOperation.SHUTDOWN));
+                HttpRequest req = HttpRequest.newBuilder()
+                        .uri(target)
+                        .POST(HttpRequest.BodyPublishers.noBody())
+                        .version(HttpClient.Version.HTTP_1_1)
+                        .build();
+                httpClient.send(req, HttpResponse.BodyHandlers.discarding());
+            } catch (Exception ignored) {
+                // Server may already be down; fall through to force-kill
+            }
+
+            try {
+                proc.waitFor(5, java.util.concurrent.TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+
+            if (proc.isAlive()) {
+                proc.destroy();
+            }
         }
 
-        try {
-            proc.waitFor(5, java.util.concurrent.TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-
-        if (running()) {
-            proc.destroy();
-        }
+        proc = null;
+        ownsProcess = false;
+        state.setValue(State.DISCONNECTED);
     }
 
     private void ensureHttpClient() {
@@ -429,7 +455,7 @@ public class LLMServer {
     }
 
     public final HealthCheckResult healthCheck() {
-        if ( !running() ) {
+        if (baseUri == null) {
             return new HealthCheckResult(false, false, Optional.empty());
         }
 

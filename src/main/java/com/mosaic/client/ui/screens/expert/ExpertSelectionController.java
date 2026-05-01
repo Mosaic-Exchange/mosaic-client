@@ -6,8 +6,10 @@ import com.mosaic.client.service.LLMServer;
 import com.mosaic.client.service.NetworkManager;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -29,7 +31,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
 
@@ -92,6 +96,10 @@ public class ExpertSelectionController {
 
     /** Handle for an in-progress adapter download (null when idle). */
     private volatile ServiceHandle activeDownloadHandle;
+    /** True while a remote adapter download is active. */
+    private final BooleanProperty downloadInProgress = new SimpleBooleanProperty(false);
+    /** True while expert lists/filters are being bulk refreshed. */
+    private boolean refreshingExperts;
 
     @FXML
     public void initialize() {
@@ -186,7 +194,6 @@ public class ExpertSelectionController {
         selectedExpert.addListener((observable, oldValue, newValue) -> {
             if (newValue == null) {
                 // Cannot use this button without an expert selected.
-                downloadBtn.setDisable(true);
                 detailSaveBtn.setVisible(false);
                 detailName.setEditable(false);
                 detailDomain.setEditable(false);
@@ -218,6 +225,7 @@ public class ExpertSelectionController {
         downloadBtn.disableProperty().bind(
                 selectedExpert.isNull()
                         .or(selectedExpert.isEqualTo(Expert.BASE_MODEL))
+                        .or(downloadInProgress)
                         .or(downloadBtn.textProperty().isEqualTo("Load").and(llmServerState.isEqualTo((LLMServer.State) LLMServer.State.CONNECTED).not()))
                         .or(downloadBtn.textProperty().isEqualTo("Unload").and(llmServerState.isEqualTo((LLMServer.State) LLMServer.State.CONNECTED).not()))
         );
@@ -242,12 +250,14 @@ public class ExpertSelectionController {
     // ── AC1: Filter logic ────────────────────────────────────
 
     private void updateDomainFilterItems() {
+        if (refreshingExperts) return;
         ObservableList<String> items = FXCollections.observableArrayList("All Domains");
         items.addAll(allDomains.stream().sorted().toList());
         domainFilter.setItems(items);
     }
 
     private void applyFilters() {
+        if (refreshingExperts || filteredExperts == null) return;
         String domain = domainFilter.getValue();
         String source = sourceFilter.getValue();
         String availability = availabilityFilter.getValue();
@@ -268,8 +278,11 @@ public class ExpertSelectionController {
             return true;
         });
 
-        // Clear selection when filters change, so detail panel resets
-        expertListView.getSelectionModel().clearSelection();
+        // Clear selection when filters change, so detail panel resets.
+        // Skip this while backing data is mutating to avoid ListView index churn.
+        if (expertListView != null && expertListView.getSelectionModel() != null) {
+            expertListView.getSelectionModel().clearSelection();
+        }
     }
 
     // ── AC4: Confirm → go to workspace ───────────────────────
@@ -349,7 +362,7 @@ public class ExpertSelectionController {
         }
 
         String adapterName = currentSelected.getAdapterFile();
-        downloadBtn.setDisable(true);
+        downloadInProgress.set(true);
         downloadBtn.setText("Downloading…");
         if (downloadProgress != null) {
             downloadProgress.setVisible(true);
@@ -417,11 +430,50 @@ public class ExpertSelectionController {
 
         NetworkManager.getInstance().importAdapter(ggufPath, stem,
                 response -> {
-                    // Remove the remote entry regardless of registration outcome
-                    allExperts.removeIf(e -> e == remoteExpert);
+                    try {
+                        // Remove the remote entry regardless of registration outcome
+                        allExperts.removeIf(e -> e == remoteExpert);
 
-                    if (response.error().isPresent()) {
-                        // Registration failed — add as UNLOADED so the user can retry
+                        if (response.error().isPresent()) {
+                            // Registration failed — add as UNLOADED so the user can retry
+                            Expert local = new Expert(displayName, domain, Expert.Source.LOCAL, stem);
+                            try {
+                                adapterDao.upsert(local);
+                            } catch (SQLException e) {
+                                System.getLogger("ExpertSelectionController").log(
+                                        System.Logger.Level.ERROR, "DB upsert failed: " + e.getMessage());
+                            }
+                            allExperts.add(local);
+                            new Alert(Alert.AlertType.WARNING,
+                                    "Adapter downloaded but could not be loaded: " + response.error().get()
+                                            + "\nYou can load it manually from the expert list.",
+                                    ButtonType.OK).showAndWait();
+                        } else {
+                            // Registration succeeded — add as LOADED
+                            Expert local = new Expert(displayName, domain, Expert.Source.LOCAL,
+                                    stem, response.adapterId());
+                            try {
+                                adapterDao.upsert(local);
+                            } catch (SQLException e) {
+                                System.getLogger("ExpertSelectionController").log(
+                                        System.Logger.Level.ERROR, "DB upsert failed: " + e.getMessage());
+                            }
+                            allExperts.add(local);
+                            refreshNetworkAdapterCatalog();
+                        }
+                    } catch (Exception e) {
+                        System.getLogger("ExpertSelectionController").log(
+                                System.Logger.Level.ERROR, "Post-download UI update failed: " + e.getMessage());
+                        new Alert(Alert.AlertType.ERROR,
+                                "Adapter registration completed but UI update failed: " + e.getMessage(),
+                                ButtonType.OK).showAndWait();
+                    } finally {
+                        unlockScreen();
+                    }
+                },
+                throwable -> {
+                    try {
+                        allExperts.removeIf(e -> e == remoteExpert);
                         Expert local = new Expert(displayName, domain, Expert.Source.LOCAL, stem);
                         try {
                             adapterDao.upsert(local);
@@ -430,45 +482,18 @@ public class ExpertSelectionController {
                                     System.Logger.Level.ERROR, "DB upsert failed: " + e.getMessage());
                         }
                         allExperts.add(local);
-                        unlockScreen();
                         new Alert(Alert.AlertType.WARNING,
-                                "Adapter downloaded but could not be loaded: " + response.error().get()
+                                "Adapter downloaded but registration failed: " + throwable.getMessage()
                                         + "\nYou can load it manually from the expert list.",
                                 ButtonType.OK).showAndWait();
-                    } else {
-                        // Registration succeeded — add as LOADED
-                        Expert local = new Expert(displayName, domain, Expert.Source.LOCAL,
-                                stem, response.adapterId());
-                        try {
-                            adapterDao.upsert(local);
-                        } catch (SQLException e) {
-                            System.getLogger("ExpertSelectionController").log(
-                                    System.Logger.Level.ERROR, "DB upsert failed: " + e.getMessage());
-                        }
-                        allExperts.add(local);
-                        refreshNetworkAdapterCatalog();
+                    } finally {
                         unlockScreen();
                     }
-                },
-                throwable -> {
-                    allExperts.removeIf(e -> e == remoteExpert);
-                    Expert local = new Expert(displayName, domain, Expert.Source.LOCAL, stem);
-                    try {
-                        adapterDao.upsert(local);
-                    } catch (SQLException e) {
-                        System.getLogger("ExpertSelectionController").log(
-                                System.Logger.Level.ERROR, "DB upsert failed: " + e.getMessage());
-                    }
-                    allExperts.add(local);
-                    unlockScreen();
-                    new Alert(Alert.AlertType.WARNING,
-                            "Adapter downloaded but registration failed: " + throwable.getMessage()
-                                    + "\nYou can load it manually from the expert list.",
-                            ButtonType.OK).showAndWait();
                 });
     }
 
     private void resetDownloadButton() {
+        downloadInProgress.set(false);
         downloadBtn.setText("Download");
         if (downloadProgress != null) {
             downloadProgress.setVisible(false);
@@ -674,15 +699,27 @@ public class ExpertSelectionController {
     // ── Load local adapters ────────────────────
 
     private void loadLocalAdapters() throws SQLException {
-        // Remove the current local adapters
-        allExperts.removeAll(
-                allExperts.stream()
-                        .filter(e -> e.getSource() == Expert.Source.LOCAL)
-                        .toList()
-        );
+        refreshingExperts = true;
+        try {
+            // Build next list first, then replace in one shot. This avoids transient
+            // invalid indices in FilteredList/ListView while listeners are firing.
+            List<Expert> nextExperts = new ArrayList<>();
+            nextExperts.add(Expert.BASE_MODEL);
+            nextExperts.addAll(adapterDao.findAll());
 
-        allExperts.add(Expert.BASE_MODEL);
-        allExperts.addAll(adapterDao.findAll());
+            for (Expert existing : allExperts) {
+                if (existing.getSource() == Expert.Source.REMOTE) {
+                    nextExperts.add(existing);
+                }
+            }
+
+            allExperts.setAll(nextExperts);
+        } finally {
+            refreshingExperts = false;
+        }
+
+        updateDomainFilterItems();
+        applyFilters();
     }
 
     // ── Network discovery ────────────────────────────────────

@@ -1,7 +1,7 @@
 [submodule "exchange-server"]
     path = exchange-server
 	url = https://github.com/Mosaic-Exchange/exchange-server.git
-    branch = rumor-1.0
+    branch = remotetrial
 
 
 [submodule "llm-server"]

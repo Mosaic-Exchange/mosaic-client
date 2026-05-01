@@ -76,11 +76,11 @@ echo "build.sh: building for JavaFX platform: ${JAVAFX_PLATFORM}"
 
 if [[ -f "${ROOT}/exchange-server/pom.xml" ]]; then
   echo "build.sh: installing org.rumor:rumor (exchange-server) into local Maven repo..."
-  "${MAVEN}" "${MVN_EXTRA[@]}" -f "${ROOT}/exchange-server/pom.xml" install -DskipTests "$@"
+  "${MAVEN}" ${MVN_EXTRA[@]+"${MVN_EXTRA[@]}"} -f "${ROOT}/exchange-server/pom.xml" install -DskipTests "$@"
 fi
 
 echo "build.sh: packaging mosaic-client..."
-"${MAVEN}" "${MVN_EXTRA[@]}" -f "${ROOT}/pom.xml" package -DskipTests \
+"${MAVEN}" ${MVN_EXTRA[@]+"${MVN_EXTRA[@]}"} -f "${ROOT}/pom.xml" package -DskipTests \
   -Djavafx.platform="${JAVAFX_PLATFORM}" "$@"
 
 if [[ ! -f "${JAR}" ]]; then
