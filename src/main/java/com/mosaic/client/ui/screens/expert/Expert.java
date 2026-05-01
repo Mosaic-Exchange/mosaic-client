@@ -6,6 +6,7 @@ import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import org.rumor.gossip.NodeId;
 
 public class Expert {
     // Properties (accessed with methods below)
@@ -62,8 +63,13 @@ public class Expert {
         return status.get().equals(Status.LOADED);
     }
 
-    // Server-side ID (used for queries)
+    // Server-side ID (used for local queries)
     private String serverSideId;
+
+    // Remote targeting — non-null only for REMOTE experts discovered via the adapter catalog.
+    // remoteNodeId: which peer owns this adapter; remoteAdapterId: the server-side ID on that peer.
+    private NodeId remoteNodeId;
+    private String remoteAdapterId;
 
     // Getters
     public String getName() { return name.get(); }
@@ -72,12 +78,16 @@ public class Expert {
     public String getAdapterFile() { return adapterFile.get(); }
     public Status getStatus() { return status.get(); }
     public String getServerSideId() { return serverSideId; }
+    public NodeId getRemoteNodeId() { return remoteNodeId; }
+    public String getRemoteAdapterId() { return remoteAdapterId; }
 
     // Setters
     public void setName(String value) { name.set(value); }
     public void setDomain(String value) { domain.set(value); }
     public void setSource(Source value) { source.set(value); }
     public void setAdapterFile(String value) { adapterFile.set(value); }
+    public void setRemoteNodeId(NodeId nodeId) { this.remoteNodeId = nodeId; }
+    public void setRemoteAdapterId(String adapterId) { this.remoteAdapterId = adapterId; }
 
     // Expose read-only properties
     public ReadOnlyStringProperty nameProperty() { return name; }

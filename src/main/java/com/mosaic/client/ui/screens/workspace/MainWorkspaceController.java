@@ -395,7 +395,15 @@ public class MainWorkspaceController {
         };
 
         if (remote) {
-            activeInferenceHandle = net.inferRemote(prompt, callback);
+            // Use targeted dispatch when we know which node and adapter to use (Part B)
+            org.rumor.gossip.NodeId targetNode  = expert.getRemoteNodeId();
+            String remoteAdapterId              = expert.getRemoteAdapterId();
+            if (targetNode != null && remoteAdapterId != null && !remoteAdapterId.isEmpty()) {
+                activeInferenceHandle = net.inferRemote(prompt, remoteAdapterId, targetNode, callback);
+            } else {
+                // Fallback: any peer offering InferenceService, no specific adapter
+                activeInferenceHandle = net.inferRemote(prompt, callback);
+            }
         } else if (expert != null) {
             // BASE_MODEL has serverSideId = "", so it is ignored.
             activeInferenceHandle = net.inferLocal(prompt, expert.getServerSideId(), callback);

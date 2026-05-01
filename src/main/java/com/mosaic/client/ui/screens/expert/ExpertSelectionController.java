@@ -29,7 +29,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.StringJoiner;
 
 /**
  * Controller for the Expert Selection screen.
@@ -109,6 +111,9 @@ public class ExpertSelectionController {
             );
             alert.showAndWait();
         }
+
+        // Publish the initial catalog so peers can see our loaded adapters immediately
+        refreshNetworkAdapterCatalog();
 
         // Merge remote adapters discovered via gossip
         loadRemoteAdapters();
@@ -351,6 +356,9 @@ public class ExpertSelectionController {
             downloadProgress.setProgress(-1); // indeterminate
         }
 
+        // Capture before the selection changes
+        Expert remoteExpert = currentSelected;
+
         activeDownloadHandle = NetworkManager.getInstance().downloadAdapter(adapterName,
                 new NetworkManager.AdapterDownloadCallback() {
                     @Override
@@ -365,9 +373,8 @@ public class ExpertSelectionController {
                     public void onComplete(Path outputPath) {
                         activeDownloadHandle = null;
                         resetDownloadButton();
-                        new Alert(Alert.AlertType.INFORMATION,
-                                "Adapter downloaded: " + outputPath.getFileName(),
-                                ButtonType.OK).showAndWait();
+                        // Auto-import: register with LLM server and add to local list
+                        importDownloadedAdapter(remoteExpert, outputPath);
                     }
 
                     @Override
@@ -384,6 +391,80 @@ public class ExpertSelectionController {
                         activeDownloadHandle = null;
                         resetDownloadButton();
                     }
+                });
+    }
+
+    /**
+     * After a successful download, copies the GGUF into the adapters directory,
+     * registers it with the LLM server, and adds a LOCAL expert entry to the list.
+     * Removes the REMOTE entry that was just downloaded.
+     */
+    private void importDownloadedAdapter(Expert remoteExpert, Path ggufPath) {
+        String fileName = ggufPath.getFileName().toString();
+        String stem = fileName.endsWith(".gguf")
+                ? fileName.substring(0, fileName.length() - 5)
+                : fileName;
+
+        // Preserve name/domain from catalog if available, otherwise fall back to stem
+        String displayName = (remoteExpert.getName() == null
+                || remoteExpert.getName().startsWith("("))
+                ? stem : remoteExpert.getName();
+        String domain = (remoteExpert.getDomain() == null
+                || remoteExpert.getDomain().startsWith("("))
+                ? "Unknown" : remoteExpert.getDomain();
+
+        lockScreen("Registering downloaded adapter…");
+
+        NetworkManager.getInstance().importAdapter(ggufPath, stem,
+                response -> {
+                    // Remove the remote entry regardless of registration outcome
+                    allExperts.removeIf(e -> e == remoteExpert);
+
+                    if (response.error().isPresent()) {
+                        // Registration failed — add as UNLOADED so the user can retry
+                        Expert local = new Expert(displayName, domain, Expert.Source.LOCAL, stem);
+                        try {
+                            adapterDao.upsert(local);
+                        } catch (SQLException e) {
+                            System.getLogger("ExpertSelectionController").log(
+                                    System.Logger.Level.ERROR, "DB upsert failed: " + e.getMessage());
+                        }
+                        allExperts.add(local);
+                        unlockScreen();
+                        new Alert(Alert.AlertType.WARNING,
+                                "Adapter downloaded but could not be loaded: " + response.error().get()
+                                        + "\nYou can load it manually from the expert list.",
+                                ButtonType.OK).showAndWait();
+                    } else {
+                        // Registration succeeded — add as LOADED
+                        Expert local = new Expert(displayName, domain, Expert.Source.LOCAL,
+                                stem, response.adapterId());
+                        try {
+                            adapterDao.upsert(local);
+                        } catch (SQLException e) {
+                            System.getLogger("ExpertSelectionController").log(
+                                    System.Logger.Level.ERROR, "DB upsert failed: " + e.getMessage());
+                        }
+                        allExperts.add(local);
+                        refreshNetworkAdapterCatalog();
+                        unlockScreen();
+                    }
+                },
+                throwable -> {
+                    allExperts.removeIf(e -> e == remoteExpert);
+                    Expert local = new Expert(displayName, domain, Expert.Source.LOCAL, stem);
+                    try {
+                        adapterDao.upsert(local);
+                    } catch (SQLException e) {
+                        System.getLogger("ExpertSelectionController").log(
+                                System.Logger.Level.ERROR, "DB upsert failed: " + e.getMessage());
+                    }
+                    allExperts.add(local);
+                    unlockScreen();
+                    new Alert(Alert.AlertType.WARNING,
+                            "Adapter downloaded but registration failed: " + throwable.getMessage()
+                                    + "\nYou can load it manually from the expert list.",
+                            ButtonType.OK).showAndWait();
                 });
     }
 
@@ -444,6 +525,9 @@ public class ExpertSelectionController {
                         unlockScreen();
                     }
 
+                    // Publish updated catalog so peers can use this adapter remotely
+                    refreshNetworkAdapterCatalog();
+
                     // Success!
                     System.getLogger("ExpertSelectionController").log(System.Logger.Level.INFO,
                             "Registered adapter with response: " + response);
@@ -488,6 +572,9 @@ public class ExpertSelectionController {
                 unused -> {
                     // Update button
                     updateDownloadButton(expert);
+
+                    // Publish updated catalog — this adapter is no longer available remotely
+                    refreshNetworkAdapterCatalog();
 
                     // Re-enable input
                     unlockScreen();
@@ -577,6 +664,11 @@ public class ExpertSelectionController {
         expert.setDomain(detailDomain.getText());
 
         updateDetailSaveButton(expert.getName(), expert.getDomain());
+
+        // If this adapter is loaded, update catalog so peers see the new name/domain
+        if (expert.isLoaded()) {
+            refreshNetworkAdapterCatalog();
+        }
     }
 
     // ── Load local adapters ────────────────────
@@ -596,25 +688,81 @@ public class ExpertSelectionController {
     // ── Network discovery ────────────────────────────────────
 
     /**
-     * Queries gossip state for remote adapters and adds them as "Remote"
-     * experts to the list.
+     * Queries gossip state for remote adapters and merges them into the expert list.
+     * Enriches REMOTE entries with name/domain/serverSideId from the CATALOG key when
+     * available, enabling both download (Part A) and targeted remote inference (Part B).
      */
     private void loadRemoteAdapters() {
+        // Remove stale remote entries before refreshing
+        allExperts.removeIf(e -> e.getSource() == Expert.Source.REMOTE);
+
         NetworkManager net = NetworkManager.getInstance();
         if (!net.isRunning()) return;
 
+        // ADAPTERS: nodeId -> "file.gguf:size,..."  (what's available for download)
         Map<NodeId, String> peerAdapters = net.discoverAdapters();
+        // CATALOG:  nodeId -> "file.gguf|name|domain|serverId,..."  (what's loaded for remote inference)
+        Map<NodeId, String> peerCatalogs = net.discoverAdapterCatalog();
+
+        // Build a lookup from gguf filename -> catalog metadata
+        record CatalogEntry(String name, String domain, String serverId, NodeId nodeId) {}
+        Map<String, CatalogEntry> catalogByFile = new HashMap<>();
+        for (var entry : peerCatalogs.entrySet()) {
+            NodeId nodeId = entry.getKey();
+            if (entry.getValue() == null || entry.getValue().isEmpty()) continue;
+            for (String item : entry.getValue().split(",")) {
+                if (item.isEmpty()) continue;
+                String[] parts = item.split("\\|", 4);
+                if (parts.length == 4) {
+                    catalogByFile.put(parts[0], new CatalogEntry(parts[1], parts[2], parts[3], nodeId));
+                }
+            }
+        }
+
+        // Add remote experts from ADAPTERS, enriched with catalog data where available
         for (var entry : peerAdapters.entrySet()) {
+            NodeId nodeId = entry.getKey();
             String listing = entry.getValue();
             if (listing == null || listing.isEmpty()) continue;
 
             for (String item : listing.split(",")) {
                 if (item.isEmpty()) continue;
                 int colon = item.lastIndexOf(':');
-                String name = colon > 0 ? item.substring(0, colon) : item;
-                allExperts.add(new Expert("(Unknown)", "(Unknown)", Expert.Source.REMOTE, name));
+                String adapterFile = colon > 0 ? item.substring(0, colon) : item;
+
+                CatalogEntry cat = catalogByFile.get(adapterFile);
+                String name   = (cat != null) ? cat.name()   : adapterFile;
+                String domain = (cat != null) ? cat.domain() : "(Unknown)";
+
+                Expert expert = new Expert(name, domain, Expert.Source.REMOTE, adapterFile);
+                // Store remote targeting info so the workspace can do directed inference
+                expert.setRemoteNodeId((cat != null) ? cat.nodeId() : nodeId);
+                if (cat != null) {
+                    expert.setRemoteAdapterId(cat.serverId());
+                }
+                allExperts.add(expert);
             }
         }
+    }
+
+    /**
+     * Rebuilds the adapter catalog string from the current in-memory expert list
+     * and pushes it to NetworkManager so it is published via gossip.
+     * Call this after any load/unload/import operation.
+     */
+    private void refreshNetworkAdapterCatalog() {
+        StringJoiner joiner = new StringJoiner(",");
+        for (Expert e : allExperts) {
+            if (e.getSource() == Expert.Source.LOCAL
+                    && e.getServerSideId() != null
+                    && !e.getServerSideId().isEmpty()) {
+                joiner.add(e.getAdapterFile() + ".gguf|"
+                         + e.getName()        + "|"
+                         + e.getDomain()      + "|"
+                         + e.getServerSideId());
+            }
+        }
+        NetworkManager.getInstance().updateAdapterCatalog(joiner.toString());
     }
 
     public void onAddAdapterFile(ActionEvent actionEvent) {

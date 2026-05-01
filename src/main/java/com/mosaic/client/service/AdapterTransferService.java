@@ -19,29 +19,41 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.StringJoiner;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /**
- * Streams adapter files between peers and publishes available adapters
- * into gossip state for discovery.
+ * Streams adapter GGUF files between peers and publishes two gossip keys:
  *
- * <p><b>State published</b> (key {@code ADAPTERS}):
- * comma-separated entries of {@code name:size} for every adapter file in
- * the adapters directory.
+ * <ul>
+ *   <li><b>{@code ADAPTERS}</b> — comma-separated {@code name:size} for every
+ *       {@code .gguf} file in the shared adapters directory (available for download).</li>
+ *   <li><b>{@code CATALOG}</b> — comma-separated
+ *       {@code ggufFile|displayName|domain|serverSideId} for adapters that are
+ *       currently loaded on this node (available for remote inference).</li>
+ * </ul>
  *
  * <p><b>Request format</b> (UTF-8): adapter filename.
- * <p><b>Response</b>: raw file bytes, streamed in chunks.
+ * <p><b>Response</b>: raw file bytes, streamed in 64 KB chunks.
  */
 @Streamable
 @MaintainState
 public class AdapterTransferService extends DistributedService {
 
-    public static final String STATE_KEY = "ADAPTERS";
+    public static final String STATE_KEY   = "ADAPTERS";
+    public static final String CATALOG_KEY = "CATALOG";
     private static final int READ_BUFFER_SIZE = 64 * 1024;
 
     private final Path adaptersRoot;
+    private final Supplier<String> catalogSupplier;
 
-    public AdapterTransferService(Path adaptersRoot) {
-        this.adaptersRoot = adaptersRoot.toAbsolutePath().normalize();
+    /**
+     * @param adaptersRoot    flat directory of {@code .gguf} files to serve and advertise
+     * @param catalogSupplier builds the CATALOG state string on demand;
+     *                        format: {@code "file.gguf|name|domain|serverId,..."}
+     */
+    public AdapterTransferService(Path adaptersRoot, Supplier<String> catalogSupplier) {
+        this.adaptersRoot    = adaptersRoot.toAbsolutePath().normalize();
+        this.catalogSupplier = catalogSupplier;
     }
 
     // -- State publishing --
@@ -65,6 +77,11 @@ public class AdapterTransferService extends DistributedService {
         return joiner.toString();
     }
 
+    @StateKey("CATALOG")
+    public String computeCatalog() {
+        return catalogSupplier.get();
+    }
+
     // -- Client-side helpers --
 
     /**
@@ -77,9 +94,18 @@ public class AdapterTransferService extends DistributedService {
     }
 
     /**
+     * Returns remote peers' adapter catalog from gossip state.
+     *
+     * @return map of node ID to catalog string (comma-separated ggufFile|name|domain|serverId)
+     */
+    public Map<NodeId, String> discoverAdapterCatalog() {
+        return clusterView().stateForKey(qualifiedKey(CATALOG_KEY));
+    }
+
+    /**
      * Downloads an adapter from a peer that has it.
      *
-     * @param adapterName   the adapter filename to download
+     * @param adapterName   the adapter filename to download (e.g. {@code "myAdapter.gguf"})
      * @param onStateChange callback for request lifecycle events
      * @return a handle that can be used to cancel the download
      */
