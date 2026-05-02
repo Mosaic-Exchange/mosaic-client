@@ -1,0 +1,8 @@
+---
+host: "172.20.10.3"
+dataDir: "mosaic-shared/demo"
+debugEnabled: true
+llmServerPort: 4000
+nodeType: "basic"
+port: 7002
+seed: "172.20.10.2:7001"
